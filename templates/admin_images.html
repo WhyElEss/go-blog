@@ -1,0 +1,25 @@
+{{define "content"}}
+<div class="bar">
+  <h1>{{t .Lang "images"}}</h1>
+  <button type="button" class="btn primary" data-library-upload>{{t .Lang "upload"}}</button>
+  <span class="status" id="upload-status" data-uploading="{{t .Lang "uploading"}}" data-failed="{{t .Lang "upload_failed"}}"></span>
+</div>
+<input type="file" id="img-file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" hidden>
+<p class="hint">{{t .Lang "img_hint"}}</p>
+{{if not .Images}}<p class="muted">{{t .Lang "no_items"}}</p>{{end}}
+<div class="gallery">
+{{range .Images}}
+  <figure class="tile">
+    <a href="{{.URL}}" target="_blank"><img src="{{.Thumb}}" alt="" loading="lazy"></a>
+    <figcaption>
+      <code>{{.Key}}</code>
+      <span class="muted">{{.Width}}×{{.Height}} · {{.Size}} · {{if .Uses}}{{printf (t $.Lang "img_uses") .Uses}}{{else}}{{t $.Lang "img_unused"}}{{end}}</span>
+      <span class="tile-actions">
+        <button type="button" class="btn small" data-copy="{{.Markdown}}" data-copied="{{t $.Lang "copied"}}">{{t $.Lang "copy_md"}}</button>
+        {{if not .Uses}}<form method="post" action="/admin/images/delete" data-confirm="{{t $.Lang "confirm_img_del"}}"><input type="hidden" name="key" value="{{.Key}}"><button class="btn small danger">{{t $.Lang "delete"}}</button></form>{{end}}
+      </span>
+    </figcaption>
+  </figure>
+{{end}}
+</div>
+{{end}}

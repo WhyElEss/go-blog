@@ -1,0 +1,36 @@
+{{define "layout"}}<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+{{with .Description}}<meta name="description" content="{{.}}">{{end}}
+<meta property="og:site_name" content="{{.SiteTitle}}">
+<meta property="og:title" content="{{.OGTitle}}">
+<meta property="og:type" content="{{.OGType}}">
+<meta property="og:url" content="{{.Origin}}{{.Path}}">
+{{with .Description}}<meta property="og:description" content="{{.}}">{{end}}
+{{with .OGImage}}<meta property="og:image" content="{{.}}"><meta name="twitter:card" content="summary_large_image">{{end}}
+<link rel="alternate" type="application/rss+xml" title="{{.SiteTitle}}" href="{{.Origin}}/rss/">
+<link rel="icon" href="/favicon.ico">
+<link rel="stylesheet" href="/static/content.css?v={{.Version}}">
+<link rel="stylesheet" href="/static/style.css?v={{.Version}}">
+</head>
+<body>
+<header class="site-head">
+  <div class="wrap head-row">
+    <a class="brand" href="/">{{if .Logo}}<picture>{{with .LogoDark}}<source srcset="{{.}}" media="(prefers-color-scheme: dark)">{{end}}<img class="logo" src="{{.Logo}}" alt="{{.SiteTitle}}"></picture>{{else}}{{.SiteTitle}}{{end}}</a>
+    {{if .Nav}}<nav class="nav">{{range .Nav}}<a href="{{.URL}}">{{.Label}}</a>{{end}}</nav>{{end}}
+  </div>
+</header>
+<main class="wrap">
+{{template "content" .}}
+</main>
+<footer class="site-foot">
+  <div class="wrap foot-row">
+    <span>© {{.Year}} {{.SiteTitle}}</span>
+    <nav class="nav">{{range .FooterNav}}<a href="{{.URL}}">{{.Label}}</a>{{end}}<a href="/rss/">{{t .SiteLang "rss"}}</a>{{if .Admin}}<a href="/admin/">{{t .SiteLang "admin"}}</a>{{end}}</nav>
+  </div>
+</footer>
+</body>
+</html>{{end}}

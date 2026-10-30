@@ -1,0 +1,15 @@
+{{define "content"}}
+<article class="post">
+  {{if .Post.Draft}}<p class="notice">{{t .SiteLang "draft_note"}} <a href="{{.EditURL}}">{{t .SiteLang "edit"}}</a></p>
+  {{else if .Post.Scheduled}}<p class="notice">{{printf (t .SiteLang "sched_note") .Post.ScheduledFor}} <a href="{{.EditURL}}">{{t .SiteLang "edit"}}</a></p>{{end}}
+  <header class="post-head">
+    <h1>{{.Post.Title}}</h1>
+    {{if not .Post.Page}}<p class="meta"><time datetime="{{.Post.DateISO}}">{{.Post.Date}}</time>{{range .Post.Tags}} · <a href="{{.URL}}">{{.Name}}</a>{{end}}{{if and .EditURL (not .Post.Draft) (not .Post.Scheduled)}} · <a href="{{.EditURL}}">{{t .SiteLang "edit"}}</a>{{end}}</p>{{end}}
+  </header>
+  {{if .Post.Cover}}<figure class="post-cover"><img src="{{.Post.Cover}}"{{if .Post.CoverSrcset}} srcset="{{.Post.CoverSrcset}}" sizes="(min-width: 1000px) 960px, calc(100vw - 32px)" width="{{.Post.CoverW}}" height="{{.Post.CoverH}}"{{end}} alt=""></figure>{{end}}
+  <div class="content">
+{{.HTML}}
+  </div>
+  {{if and .Post.Page .EditURL}}<p class="meta"><a href="{{.EditURL}}">{{t .SiteLang "edit"}}</a></p>{{end}}
+</article>
+{{end}}

@@ -1,0 +1,61 @@
+{{define "content"}}
+<form id="editor" class="editor" method="post" action="{{if .New}}/admin/posts{{else}}/admin/posts/{{.Post.ID}}{{end}}" data-unsaved="{{t .Lang "unsaved"}}">
+  <div class="bar">
+    <h1>{{.Title}}</h1>
+    <div class="actions">
+      {{if not .New}}<a class="btn" href="/{{.Post.Slug}}/" target="_blank">{{t .Lang "open"}} ↗</a>{{end}}
+      <span class="badge {{if .Post.Draft}}st_draft{{else if .Live}}st_published{{else}}st_scheduled{{end}}">{{if .Post.Draft}}{{t .Lang "st_draft"}}{{else if .Live}}{{t .Lang "st_published"}}{{else}}{{t .Lang "st_scheduled"}}{{end}}</span>
+      <button class="btn" name="action" value="save">{{t .Lang "save"}}</button>
+      {{if .Post.Draft}}<button class="btn primary" name="action" value="publish">{{t .Lang "publish"}}</button>
+      {{else}}<button class="btn" name="action" value="unpublish">{{t .Lang "unpublish"}}</button>{{end}}
+    </div>
+  </div>
+
+  <input class="title-input" name="title" value="{{.Post.Title}}" placeholder="{{t .Lang "title"}}" required>
+
+  <div class="toolbar" role="toolbar">
+    <button type="button" data-md="bold" title="Bold (⌘B)"><b>B</b></button>
+    <button type="button" data-md="italic" title="Italic (⌘I)"><i>I</i></button>
+    <button type="button" data-md="h2">H2</button>
+    <button type="button" data-md="h3">H3</button>
+    <button type="button" data-md="link" title="Link (⌘K)">🔗</button>
+    <button type="button" data-md="quote">❝</button>
+    <button type="button" data-md="list">•</button>
+    <span class="sep"></span>
+    <button type="button" data-img="left" title="{{t .Lang "img_left"}}">◧ {{t .Lang "img_left"}}</button>
+    <button type="button" data-img="center" title="{{t .Lang "img_center"}}">▣ {{t .Lang "img_center"}}</button>
+    <button type="button" data-img="right" title="{{t .Lang "img_right"}}">◨ {{t .Lang "img_right"}}</button>
+    <span class="status" id="upload-status" data-uploading="{{t .Lang "uploading"}}" data-failed="{{t .Lang "upload_failed"}}"></span>
+  </div>
+  <input type="file" id="img-file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" hidden>
+
+  <div class="split">
+    <textarea id="body" name="body" spellcheck="true" lang="{{.Post.Lang}}" placeholder="{{t .Lang "body"}}">{{.Post.Body}}</textarea>
+    <div class="preview-wrap">
+      <div class="preview-label">{{t .Lang "preview"}}</div>
+      <div id="preview" class="content"></div>
+    </div>
+  </div>
+  <p class="hint">{{t .Lang "md_help"}}</p>
+
+  <div class="fields">
+    <label>{{t .Lang "slug"}}<input name="slug" value="{{.Post.Slug}}" placeholder="{{t .Lang "slug_hint"}}"></label>
+    <label>{{t .Lang "tags"}}<input name="tags" value="{{.TagsText}}" placeholder="{{t .Lang "tags_hint"}}"></label>
+    <label>{{t .Lang "published"}}<input type="datetime-local" name="published_at" value="{{.DateValue}}"><small>{{t .Lang "published_hint"}}</small></label>
+    <label>{{t .Lang "lang"}}<select name="lang"><option value="en"{{if ne .Post.Lang "ru"}} selected{{end}}>English</option><option value="ru"{{if eq .Post.Lang "ru"}} selected{{end}}>Русский</option></select></label>
+    <label class="wide">{{t .Lang "excerpt"}}<textarea name="excerpt" rows="2">{{.Post.Excerpt}}</textarea><small>{{t .Lang "excerpt_hint"}}</small></label>
+    <div class="wide cover-field">
+      <label>{{t .Lang "cover"}}<input name="cover" id="cover" value="{{.Post.Cover}}" placeholder="/img/…"></label>
+      <button type="button" class="btn" data-cover-upload>{{t .Lang "upload"}}</button>
+      <button type="button" class="btn" data-cover-clear>{{t .Lang "remove"}}</button>
+      <img id="cover-preview" alt=""{{if .Post.Cover}} src="{{.Post.Cover}}"{{else}} hidden{{end}}>
+    </div>
+    <label class="check wide"><input type="checkbox" name="page" value="1"{{if .Post.Page}} checked{{end}}> {{t .Lang "is_page"}}</label>
+  </div>
+</form>
+{{if not .New}}
+<form class="danger" method="post" action="/admin/posts/{{.Post.ID}}/delete" data-confirm="{{t .Lang "confirm_delete"}}">
+  <button class="btn danger">{{t .Lang "delete"}}</button>
+</form>
+{{end}}
+{{end}}

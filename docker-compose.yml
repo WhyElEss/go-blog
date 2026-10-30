@@ -1,0 +1,37 @@
+# Lives on the host next to .env. The image is built straight from GitHub:
+#   docker compose build --no-cache && docker compose up -d
+name: blog
+
+services:
+  blog:
+    build:
+      context: https://github.com/WhyElEss/go-blog.git#main
+    image: blog:local
+    container_name: blog
+    restart: unless-stopped
+    # format: raw — the password hash is read literally, never interpolated.
+    env_file:
+      - path: .env
+        format: raw
+    ports:
+      - "${HOST_PORT:-8096}:8096"
+    volumes:
+      # blog.json (posts, settings, image records), session.key, images/.
+      - data:/data
+    networks:
+      - net
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  data:
+    name: blog_data
+
+networks:
+  net:
+    name: blog_net

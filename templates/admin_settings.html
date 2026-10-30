@@ -1,0 +1,26 @@
+{{define "content"}}
+<h1>{{t .Lang "settings"}}</h1>
+<form class="settings" method="post" action="/admin/settings">
+  <label>{{t .Lang "site_title"}}<input name="title" value="{{.S.Title}}" required></label>
+  <label>{{t .Lang "site_desc"}}<textarea name="description" rows="2">{{.S.Description}}</textarea></label>
+  <label>{{t .Lang "site_lang"}}<select name="lang"><option value="en"{{if ne .S.Lang "ru"}} selected{{end}}>English</option><option value="ru"{{if eq .S.Lang "ru"}} selected{{end}}>Русский</option></select></label>
+  <label>{{t .Lang "per_page"}}<input type="number" name="posts_per_page" min="1" max="100" value="{{.S.PostsPerPage}}"></label>
+  <label>{{t .Lang "nav"}}<textarea name="nav" rows="5" placeholder="About | /about/">{{.NavText}}</textarea><small>{{t .Lang "nav_hint"}}</small></label>
+  <label>{{t .Lang "footer_nav"}}<textarea name="footer_nav" rows="3" placeholder="Contact | /contact/">{{.FooterTxt}}</textarea><small>{{t .Lang "nav_hint"}}</small></label>
+  <div class="cover-field">
+    <label>{{t .Lang "logo"}}<input name="logo" id="logo" value="{{.S.Logo}}" placeholder="/img/…"></label>
+    <button type="button" class="btn" data-field-upload="logo">{{t .Lang "upload"}}</button>
+  </div>
+  <div class="cover-field">
+    <label>{{t .Lang "logo_dark"}}<input name="logo_dark" id="logo_dark" value="{{.S.LogoDark}}" placeholder="/img/…"></label>
+    <button type="button" class="btn" data-field-upload="logo_dark">{{t .Lang "upload"}}</button>
+  </div>
+  <div class="cover-field">
+    <label>{{t .Lang "icon"}}<input name="icon" id="icon" value="{{.S.Icon}}" placeholder="/img/…"></label>
+    <button type="button" class="btn" data-field-upload="icon">{{t .Lang "upload"}}</button>
+  </div>
+  <span class="status" id="upload-status" data-uploading="{{t .Lang "uploading"}}" data-failed="{{t .Lang "upload_failed"}}"></span>
+  <input type="file" id="img-file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" hidden>
+  <button class="btn primary">{{t .Lang "save"}}</button>
+</form>
+{{end}}

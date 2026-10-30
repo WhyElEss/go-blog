@@ -1,0 +1,28 @@
+{{define "rows"}}
+<table class="list">
+  <thead><tr><th>{{t .Lang "col_title"}}</th><th>{{t .Lang "col_status"}}</th><th>{{t .Lang "col_date"}}</th></tr></thead>
+  <tbody>
+  {{range .Rows}}
+  <tr>
+    <td><a href="/admin/posts/{{.ID}}">{{.Title}}</a> <a class="muted" href="{{.URL}}" target="_blank" title="{{.URL}}">↗</a></td>
+    <td><span class="badge {{.StatusKey}}">{{.Status}}</span></td>
+    <td class="nowrap">{{.Date}}</td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+
+{{define "content"}}
+<div class="bar">
+  <h1>{{t .Lang "posts"}}</h1>
+  <a class="btn primary" href="/admin/new">+ {{t .Lang "new_post"}}</a>
+</div>
+{{if .Posts}}{{template "rows" (rows .Lang .Posts)}}{{else}}<p class="muted">{{t .Lang "no_items"}}</p>{{end}}
+
+<div class="bar">
+  <h2>{{t .Lang "pages"}}</h2>
+  <a class="btn" href="/admin/new?page=1">+ {{t .Lang "new_page"}}</a>
+</div>
+{{if .Pages}}{{template "rows" (rows .Lang .Pages)}}{{else}}<p class="muted">{{t .Lang "no_items"}}</p>{{end}}
+{{end}}

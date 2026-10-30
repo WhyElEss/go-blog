@@ -1,0 +1,34 @@
+{{define "layout"}}<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{{.Title}} — {{.SiteTitle}}</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="stylesheet" href="/static/content.css?v={{.Version}}">
+<link rel="stylesheet" href="/static/admin.css?v={{.Version}}">
+<script src="/static/admin.js?v={{.Version}}" defer></script>
+</head>
+<body class="admin">
+<header class="a-head">
+  {{if not .NoNav}}
+  <nav class="a-nav">
+    <a href="/admin/"{{if eq .Path "/admin/"}} class="on"{{end}}>{{t .Lang "posts"}}</a>
+    <a href="/admin/images"{{if eq .Path "/admin/images"}} class="on"{{end}}>{{t .Lang "images"}}</a>
+    <a href="/admin/settings"{{if eq .Path "/admin/settings"}} class="on"{{end}}>{{t .Lang "settings"}}</a>
+    <a href="/" target="_blank">{{t .Lang "view_site"}} ↗</a>
+  </nav>
+  {{else}}<span class="a-brand">{{.SiteTitle}}</span>{{end}}
+  <div class="a-right">
+    <span class="langs"><a href="/admin/lang/ru?next={{.Path}}"{{if eq .Lang "ru"}} class="on"{{end}}>RU</a> <a href="/admin/lang/en?next={{.Path}}"{{if eq .Lang "en"}} class="on"{{end}}>EN</a></span>
+    {{if not .NoNav}}<form method="post" action="/admin/logout"><button class="link">{{t .Lang "logout"}}</button></form>{{end}}
+  </div>
+</header>
+<main class="a-main">
+{{with .Flash}}<p class="flash">{{.}}</p>{{end}}
+{{with .Error}}<p class="error">{{.}}</p>{{end}}
+{{template "content" .}}
+</main>
+</body>
+</html>{{end}}

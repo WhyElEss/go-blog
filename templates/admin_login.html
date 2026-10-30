@@ -1,0 +1,7 @@
+{{define "content"}}
+<form class="login" method="post" action="/admin/login">
+  <h1>{{t .Lang "login"}}</h1>
+  <label>{{t .Lang "password"}}<input type="password" name="password" autocomplete="current-password" required autofocus></label>
+  <button class="btn primary">{{t .Lang "sign_in"}}</button>
+</form>
+{{end}}
