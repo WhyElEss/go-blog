@@ -14,4 +14,10 @@
   </div>
   {{if and .Post.Page .EditURL}}<p class="meta"><a href="{{.EditURL}}">{{t .SiteLang "edit"}}</a></p>{{end}}
 </article>
+{{if or .Older .Newer}}
+<nav class="post-nav" aria-label="{{t .SiteLang "more_posts"}}">
+  <div class="post-nav-side older">{{with .Older}}<span class="post-nav-label">{{t $.SiteLang "nav_older"}}</span>{{template "tile" (tile . "(min-width: 760px) 350px, calc(50vw - 22px)")}}{{end}}</div>
+  <div class="post-nav-side newer">{{with .Newer}}<span class="post-nav-label">{{t $.SiteLang "nav_newer"}}</span>{{template "tile" (tile . "(min-width: 760px) 350px, calc(50vw - 22px)")}}{{end}}</div>
+</nav>
+{{end}}
 {{end}}

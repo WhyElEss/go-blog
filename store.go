@@ -151,6 +151,38 @@ func (d *Data) postBySlug(slug string) *Post {
 	return nil
 }
 
+// neighbours returns the live posts published just before and just after p,
+// skipping pages. A page or a post visitors cannot see yet has none. The
+// returned posts are copies, safe to use after the lock is released.
+func (d *Data) neighbours(p *Post, now time.Time) (older, newer *Post) {
+	if p.Page || !p.live(now) {
+		return nil, nil
+	}
+	var prev *Post // the newer live post seen last, walking newest first
+	for i, q := range d.Posts {
+		if q.Page || !q.live(now) {
+			continue
+		}
+		if q != p {
+			prev = q
+			continue
+		}
+		if prev != nil {
+			c := *prev
+			newer = &c
+		}
+		for _, r := range d.Posts[i+1:] {
+			if !r.Page && r.live(now) {
+				c := *r
+				older = &c
+				break
+			}
+		}
+		break
+	}
+	return older, newer
+}
+
 // sortPosts keeps the newest publication date first.
 func (d *Data) sortPosts() {
 	slices.SortStableFunc(d.Posts, func(a, b *Post) int { return b.PublishedAt.Compare(a.PublishedAt) })

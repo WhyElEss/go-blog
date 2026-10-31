@@ -232,6 +232,14 @@ func (a *App) handleFavicon(w http.ResponseWriter, r *http.Request) {
 
 var templateFuncs = template.FuncMap{
 	"t": t,
+	// tile hands a card to the "tile" template with the cover's sizes
+	// attribute, which depends on how wide the tiles are where it is used.
+	"tile": func(c card, sizes string) any {
+		return struct {
+			card
+			Sizes string
+		}{c, sizes}
+	},
 	"rows": func(lang string, rows []adminRow) any {
 		return struct {
 			Lang string

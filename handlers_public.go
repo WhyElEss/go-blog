@@ -215,6 +215,8 @@ type postPage struct {
 	OnlyIn string
 	// AltURL links the version in AltLang, for posts that have both.
 	AltURL, AltLang string
+	// Older and Newer are the neighbouring posts, for a live post only.
+	Older, Newer *card
 	// EditURL is set for the signed-in admin.
 	EditURL string
 }
@@ -251,10 +253,12 @@ func (a *App) handlePost(w http.ResponseWriter, r *http.Request, slug string) {
 	}
 	now := a.now()
 	var p Post
+	var older, newer *Post
 	found := false
 	a.store.view(func(d *Data) {
 		if q := d.postBySlug(slug); q != nil {
 			p, found = *q, true
+			older, newer = d.neighbours(q, now)
 		}
 	})
 	admin := a.isAdmin(r)
@@ -285,6 +289,16 @@ func (a *App) handlePost(w http.ResponseWriter, r *http.Request, slug string) {
 	data.OGType = "article"
 	if p.Cover != "" {
 		data.OGImage = absURL(data.Origin, p.Cover)
+	}
+	if older != nil {
+		c := a.toCard(*older, older.text(lang), lang, now)
+		c.Excerpt = a.textExcerpt(older.text(lang))
+		data.Older = &c
+	}
+	if newer != nil {
+		c := a.toCard(*newer, newer.text(lang), lang, now)
+		c.Excerpt = a.textExcerpt(newer.text(lang))
+		data.Newer = &c
 	}
 	if admin {
 		data.EditURL = "/admin/posts/" + p.ID

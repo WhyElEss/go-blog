@@ -1,3 +1,13 @@
+{{define "tile"}}
+<article class="tile" lang="{{.Lang}}">
+  {{if .Cover}}<img src="{{.Cover}}"{{if .CoverSrcset}} srcset="{{.CoverSrcset}}" sizes="{{.Sizes}}" width="{{.CoverW}}" height="{{.CoverH}}"{{end}} alt="" loading="lazy" decoding="async">{{end}}
+  <div class="tile-body">
+    <h2 class="tile-title"><a class="tile-link" href="{{.URL}}">{{.Title}}</a></h2>
+    <p class="meta"><time datetime="{{.DateISO}}">{{.Date}}</time></p>
+    {{with .Excerpt}}<p class="tile-excerpt">{{.}}</p>{{end}}
+  </div>
+</article>
+{{end}}
 {{define "layout"}}<!doctype html>
 <html lang="{{.Lang}}">
 <head>
@@ -15,8 +25,10 @@
 <link rel="icon" href="/favicon.ico">
 <link rel="stylesheet" href="/static/content.css?v={{.Version}}">
 <link rel="stylesheet" href="/static/style.css?v={{.Version}}">
+<script src="/static/site.js?v={{.Version}}" defer></script>
 </head>
 <body>
+<div class="top-sentinel" aria-hidden="true"></div>
 <header class="site-head">
   <div class="wrap head-row">
     <a class="brand" href="/">{{if .Logo}}<picture>{{with .LogoDark}}<source srcset="{{.}}" media="(prefers-color-scheme: dark)">{{end}}<img class="logo" src="{{.Logo}}" alt="{{.SiteTitle}}"></picture>{{else}}{{.SiteTitle}}{{end}}</a>
@@ -35,5 +47,6 @@
     <nav class="nav">{{range .FooterNav}}<a href="{{.URL}}">{{.Label}}</a>{{end}}<a href="{{.FeedURL}}">{{t .SiteLang "rss"}}</a>{{if .Admin}}<a href="/admin/">{{t .SiteLang "admin"}}</a>{{end}}</nav>
   </div>
 </footer>
+<button type="button" class="to-top" aria-label="{{t .SiteLang "to_top"}}" title="{{t .SiteLang "to_top"}}" hidden>↑</button>
 </body>
 </html>{{end}}

@@ -566,3 +566,60 @@ func TestMergePosts(t *testing.T) {
 		t.Error("merged a post that is gone")
 	}
 }
+
+func TestPostNeighbours(t *testing.T) {
+	a := testApp(t)
+	now := time.Now()
+	day := 24 * time.Hour
+	a.store.update(func(d *Data) error {
+		d.Posts = append(d.Posts,
+			&Post{ID: "1", Slug: "first", Title: "First", Body: "x", Lang: "en", PublishedAt: now.Add(-5 * day)},
+			&Post{ID: "2", Slug: "about", Title: "About", Body: "x", Lang: "en", Page: true, PublishedAt: now.Add(-4 * day)},
+			&Post{ID: "3", Slug: "second", Title: "Second", Body: "x", Lang: "en", PublishedAt: now.Add(-3 * day),
+				Translation: &Translation{Title: "Второй", Body: "x"}},
+			&Post{ID: "4", Slug: "draft", Title: "Draft", Body: "x", Lang: "en", Draft: true},
+			&Post{ID: "5", Slug: "third", Title: "Third", Body: "x", Lang: "en", PublishedAt: now.Add(-1 * day)},
+			&Post{ID: "6", Slug: "later", Title: "Later", Body: "x", Lang: "en", PublishedAt: now.Add(day)},
+		)
+		return nil
+	})
+	nav := func(slug, accept string) (older, newer string) {
+		req := httptest.NewRequest("GET", "/"+slug+"/", nil)
+		req.Header.Set("Accept-Language", accept)
+		b := do(t, a, req).Body.String()
+		_, rest, ok := strings.Cut(b, `class="post-nav"`)
+		if !ok {
+			return "", ""
+		}
+		olderPart, newerPart, _ := strings.Cut(rest, `post-nav-side newer`)
+		title := func(s string) string {
+			_, after, ok := strings.Cut(s, `class="tile-link" href="`)
+			if !ok {
+				return ""
+			}
+			href, _, _ := strings.Cut(after, `"`)
+			return href
+		}
+		return title(olderPart), title(newerPart)
+	}
+	for _, c := range []struct{ slug, older, newer string }{
+		{"third", "/second/", ""},
+		{"second", "/first/", "/third/"},
+		{"first", "", "/second/"},
+		{"about", "", ""},
+	} {
+		if o, n := nav(c.slug, "en"); o != c.older || n != c.newer {
+			t.Errorf("%s: older %q newer %q, want %q %q", c.slug, o, n, c.older, c.newer)
+		}
+	}
+	// The neighbour's title is in the reader's language.
+	req := httptest.NewRequest("GET", "/first/", nil)
+	req.Header.Set("Accept-Language", "ru")
+	if b := do(t, a, req).Body.String(); !strings.Contains(b, ">Второй</a>") || !strings.Contains(b, "Позже →") {
+		t.Errorf("ru neighbour\n%s", b)
+	}
+	// Every public page carries the script and the button.
+	if b := do(t, a, httptest.NewRequest("GET", "/", nil)).Body.String(); !strings.Contains(b, `src="/static/site.js`) || !strings.Contains(b, `class="to-top"`) {
+		t.Error("site.js or the back-to-top button missing")
+	}
+}

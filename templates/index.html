@@ -11,15 +11,7 @@
 {{end}}
 {{with .Posts}}
 <div class="tiles">
-{{range .}}
-<article class="tile" lang="{{.Lang}}">
-  {{if .Cover}}<img src="{{.Cover}}"{{if .CoverSrcset}} srcset="{{.CoverSrcset}}" sizes="(min-width: 760px) 227px, (min-width: 560px) calc(33vw - 24px), calc(50vw - 22px)" width="{{.CoverW}}" height="{{.CoverH}}"{{end}} alt="" loading="lazy" decoding="async">{{end}}
-  <div class="tile-body">
-    <h2 class="tile-title"><a class="tile-link" href="{{.URL}}">{{.Title}}</a></h2>
-    <p class="meta"><time datetime="{{.DateISO}}">{{.Date}}</time></p>
-    {{with .Excerpt}}<p class="tile-excerpt">{{.}}</p>{{end}}
-  </div>
-</article>
+{{range .}}{{template "tile" (tile . "(min-width: 760px) 227px, (min-width: 560px) calc(33vw - 24px), calc(50vw - 22px)")}}
 {{end}}
 </div>
 {{end}}
