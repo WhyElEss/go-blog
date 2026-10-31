@@ -1,16 +1,29 @@
 {{define "content"}}
 {{if .Heading}}<h1 class="list-head"><span>{{t .SiteLang "tagged"}}</span> {{.Heading}}</h1>
 {{else if and .Description (not .PrevURL)}}<p class="site-desc">{{.Description}}</p>{{end}}
-{{range .Posts}}
+{{with .Featured}}
 <article class="card" lang="{{.Lang}}">
-  {{if .Cover}}<a class="card-cover" href="{{.URL}}" tabindex="-1" aria-hidden="true"><img src="{{.Cover}}"{{if .CoverSrcset}} srcset="{{.CoverSrcset}}" sizes="(min-width: 760px) 720px, calc(100vw - 32px)" width="{{.CoverW}}" height="{{.CoverH}}"{{end}} alt="" loading="lazy" decoding="async"></a>{{end}}
+  {{if .Cover}}<a class="card-cover" href="{{.URL}}" tabindex="-1" aria-hidden="true"><img src="{{.Cover}}"{{if .CoverSrcset}} srcset="{{.CoverSrcset}}" sizes="(min-width: 760px) 720px, calc(100vw - 32px)" width="{{.CoverW}}" height="{{.CoverH}}"{{end}} alt="" fetchpriority="high" decoding="async"></a>{{end}}
   <h2 class="card-title"><a href="{{.URL}}">{{.Title}}</a></h2>
   <p class="meta"><time datetime="{{.DateISO}}">{{.Date}}</time>{{range .Tags}} · <a href="{{.URL}}">{{.Name}}</a>{{end}}</p>
   {{with .Excerpt}}<p class="card-excerpt">{{.}}</p>{{end}}
 </article>
-{{else}}
-<p class="empty">{{t .SiteLang "no_posts"}}</p>
 {{end}}
+{{with .Posts}}
+<div class="tiles">
+{{range .}}
+<article class="tile" lang="{{.Lang}}">
+  {{if .Cover}}<img src="{{.Cover}}"{{if .CoverSrcset}} srcset="{{.CoverSrcset}}" sizes="(min-width: 760px) 227px, (min-width: 560px) calc(33vw - 24px), calc(50vw - 22px)" width="{{.CoverW}}" height="{{.CoverH}}"{{end}} alt="" loading="lazy" decoding="async">{{end}}
+  <div class="tile-body">
+    <h2 class="tile-title"><a class="tile-link" href="{{.URL}}">{{.Title}}</a></h2>
+    <p class="meta"><time datetime="{{.DateISO}}">{{.Date}}</time></p>
+    {{with .Excerpt}}<p class="tile-excerpt">{{.}}</p>{{end}}
+  </div>
+</article>
+{{end}}
+</div>
+{{end}}
+{{if not (or .Featured .Posts)}}<p class="empty">{{t .SiteLang "no_posts"}}</p>{{end}}
 {{if or .PrevURL .NextURL}}
 <nav class="pager">
   {{if .PrevURL}}<a href="{{.PrevURL}}">{{t .SiteLang "newer"}}</a>{{else}}<span></span>{{end}}

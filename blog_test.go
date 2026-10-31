@@ -462,6 +462,18 @@ func TestBilingualPosts(t *testing.T) {
 		t.Errorf("index for ru reader\n%s", b)
 	}
 
+	// The newest post is featured on the first page only; the rest are tiles.
+	b = get("/", "en").Body.String()
+	if strings.Count(b, `<article class="card"`) != 1 || strings.Count(b, `<article class="tile"`) != 1 || strings.Index(b, `class="card"`) > strings.Index(b, `class="tile"`) {
+		t.Errorf("index layout\n%s", b)
+	}
+	a.store.update(func(d *Data) error { d.Settings.PostsPerPage = 1; return nil })
+	b = get("/page/2/", "en").Body.String()
+	if strings.Contains(b, `<article class="card"`) || strings.Count(b, `<article class="tile"`) != 1 {
+		t.Errorf("page 2 layout\n%s", b)
+	}
+	a.store.update(func(d *Data) error { d.Settings.PostsPerPage = 10; return nil })
+
 	// Feeds.
 	b = get("/rss/", "ru").Body.String()
 	if !strings.Contains(b, "<title>Turntables</title>") || !strings.Contains(b, "<link>https://blog.example.com/turntables/</link>") || !strings.Contains(b, "<language>en</language>") {

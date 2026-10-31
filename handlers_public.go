@@ -122,6 +122,9 @@ func (a *App) textExcerpt(v postText) string {
 
 type indexPage struct {
 	pageBase
+	// Featured is the newest post, on the first page of a list only; Posts
+	// are the rest, shown as tiles.
+	Featured         *card
 	Posts            []card
 	Heading          string
 	PrevURL, NextURL string
@@ -186,6 +189,10 @@ func (a *App) handleIndex(w http.ResponseWriter, r *http.Request) {
 		v := p.text(data.SiteLang)
 		c := a.toCard(p, v, data.SiteLang, now)
 		c.Excerpt = a.textExcerpt(v)
+		if n == 1 && data.Featured == nil {
+			data.Featured = &c
+			continue
+		}
 		data.Posts = append(data.Posts, c)
 	}
 	if n > 2 {
