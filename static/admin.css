@@ -100,6 +100,9 @@ label.check input { width: auto; }
 .cover-field label { flex: 1; min-width: 200px; }
 #cover-preview { max-height: 90px; border-radius: 6px; }
 form.danger { margin-top: 2.5rem; }
+.syndicate { display: flex; flex-direction: column; gap: .3rem; padding: .75rem .9rem; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.syndicate p { margin: 0; }
+.syndicate .error { margin-top: .3rem; }
 
 .settings { max-width: 640px; display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
 .settings > .btn { align-self: flex-start; }

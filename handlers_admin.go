@@ -35,7 +35,11 @@ func (a *App) adminBase(r *http.Request, title string) adminBase {
 	b := adminBase{Lang: lang, Title: title, SiteTitle: site, Path: r.URL.Path, Version: version}
 	if m := r.URL.Query().Get("m"); m != "" {
 		if _, ok := messages[m]; ok {
-			b.Flash = t(lang, m)
+			if strings.HasSuffix(m, "_failed") {
+				b.Error = t(lang, m)
+			} else {
+				b.Flash = t(lang, m)
+			}
 		}
 	}
 	return b
@@ -143,6 +147,8 @@ func (a *App) handleAdminPosts(w http.ResponseWriter, r *http.Request) {
 type editPage struct {
 	adminBase
 	Post      Post
+	BskyOn    bool      // Bluesky is set up
+	BskySent  string    // when the link went out, in the admin's words
 	Tabs      []editTab // the original language first
 	New       bool
 	TagsText  string
@@ -169,6 +175,10 @@ func (a *App) editData(r *http.Request, p Post, isNew bool) editPage {
 	}
 	e := editPage{adminBase: a.adminBase(r, title), Post: p, New: isNew, TagsText: strings.Join(p.Tags, ", "), Live: p.live(a.now())}
 	e.Post.Lang = normLang(p.Lang)
+	e.BskyOn = a.bsky != nil
+	if p.Bluesky != nil {
+		e.BskySent = formatDate(e.Lang, p.Bluesky.SentAt.In(time.Local)) + " " + p.Bluesky.SentAt.In(time.Local).Format("15:04")
+	}
 	for _, l := range []string{e.Post.Lang, otherLang(e.Post.Lang)} {
 		tab := editTab{Lang: l, Name: t(l, "lang_name")}
 		switch {
@@ -233,6 +243,8 @@ func (a *App) handleSave(w http.ResponseWriter, r *http.Request) {
 		Tags:  splitTags(r.FormValue("tags")),
 		Page:  r.FormValue("page") == "1",
 		Lang:  normLang(r.FormValue("lang")),
+
+		SendBluesky: r.FormValue("bluesky") == "1",
 	}
 	// One set of text fields per language; the original language's is the
 	// post, the other's (when filled in) its translation. A post written
@@ -319,6 +331,14 @@ func (a *App) handleSave(w http.ResponseWriter, r *http.Request) {
 		}
 		p.Title, p.Slug, p.Body, p.Excerpt, p.Cover, p.Tags, p.Page, p.Lang = in.Title, in.Slug, in.Body, in.Excerpt, in.Cover, in.Tags, in.Page, in.Lang
 		p.Translation = in.Translation
+		// Once sent, the link stays sent. Ticking the box again after a
+		// failure asks for another try.
+		if p.Bluesky == nil {
+			if in.SendBluesky && (!p.SendBluesky || p.BlueskyError != "") {
+				p.BlueskyError = ""
+			}
+			p.SendBluesky = in.SendBluesky
+		}
 		p.Draft = draft
 		p.UpdatedAt = now
 		if id == "" {
@@ -341,7 +361,23 @@ func (a *App) handleSave(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "save failed", http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, "/admin/posts/"+saved.ID+"?m=saved", http.StatusSeeOther)
+	msg := "saved"
+	if a.bsky != nil {
+		var due bool
+		a.store.view(func(d *Data) {
+			if p := d.post(saved.ID); p != nil {
+				due = p.SendBluesky && p.Bluesky == nil && p.BlueskyError == "" && p.live(a.now())
+			}
+		})
+		if due {
+			if err := a.sendBluesky(saved.ID); err != nil {
+				msg = "bsky_failed"
+			} else {
+				msg = "bsky_sent"
+			}
+		}
+	}
+	http.Redirect(w, r, "/admin/posts/"+saved.ID+"?m="+msg, http.StatusSeeOther)
 }
 
 var errSlugTaken = errors.New("slug taken")
@@ -352,6 +388,7 @@ func (a *App) saveError(w http.ResponseWriter, r *http.Request, in Post, id stri
 		a.store.view(func(d *Data) {
 			if p := d.post(id); p != nil {
 				in.ID, in.Draft, in.PublishedAt, in.CreatedAt = p.ID, p.Draft, p.PublishedAt, p.CreatedAt
+				in.Bluesky, in.BlueskyError = p.Bluesky, p.BlueskyError
 			}
 		})
 	} else {

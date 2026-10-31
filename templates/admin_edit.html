@@ -58,6 +58,13 @@
       <img id="cover-preview" alt=""{{if .Post.Cover}} src="{{.Post.Cover}}"{{else}} hidden{{end}}>
     </div>
     <label class="check wide"><input type="checkbox" name="page" value="1"{{if .Post.Page}} checked{{end}}> {{t .Lang "is_page"}}</label>
+    <div class="wide syndicate">
+      {{if .BskySent}}<p>🦋 {{printf (t .Lang "bsky_done") .BskySent}}{{with .Post.Bluesky.URL}} <a href="{{.}}" target="_blank" rel="noopener">{{t $.Lang "bsky_open"}} ↗</a>{{end}}</p>
+      {{else if .BskyOn}}<label class="check"><input type="checkbox" name="bluesky" value="1"{{if .Post.SendBluesky}} checked{{end}}> 🦋 {{t .Lang "bsky_send"}}</label>
+        <small>{{if .Live}}{{t .Lang "bsky_now"}}{{else}}{{t .Lang "bsky_later"}}{{end}}</small>
+        {{with .Post.BlueskyError}}<p class="error">{{printf (t $.Lang "bsky_error") .}}</p>{{end}}
+      {{else}}<label class="check"><input type="checkbox" disabled> 🦋 {{t .Lang "bsky_send"}}</label><small>{{t .Lang "bsky_off"}}</small>{{end}}
+    </div>
   </div>
 </form>
 {{if not .New}}

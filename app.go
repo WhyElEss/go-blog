@@ -32,6 +32,10 @@ type App struct {
 	now        func() time.Time
 	// uploadMu serialises uploads, so two images never take the same name.
 	uploadMu sync.Mutex
+	// bsky announces posts on Bluesky; nil when not set up. sendMu keeps
+	// a post from being sent twice by the editor and the timer at once.
+	bsky   *bluesky
+	sendMu sync.Mutex
 }
 
 func newApp(cfg Config) (*App, error) {
@@ -62,6 +66,7 @@ func newApp(cfg Config) (*App, error) {
 		tpl:        tpl,
 		loginLimit: newLimiter(5, 15*time.Minute),
 		now:        time.Now,
+		bsky:       newBluesky(cfg),
 	}, nil
 }
 

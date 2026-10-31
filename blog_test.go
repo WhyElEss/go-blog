@@ -623,3 +623,144 @@ func TestPostNeighbours(t *testing.T) {
 		t.Error("site.js or the back-to-top button missing")
 	}
 }
+
+// fakeBluesky answers the three XRPC calls the blog makes and records them.
+type fakeBluesky struct {
+	srv     *httptest.Server
+	fail    bool
+	records []map[string]any
+	blobs   []string // content types
+}
+
+func newFakeBluesky(t *testing.T) *fakeBluesky {
+	f := &fakeBluesky{}
+	f.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/xrpc/com.atproto.server.createSession":
+			var in map[string]string
+			json.NewDecoder(r.Body).Decode(&in)
+			if f.fail || in["identifier"] != "blog.example.com" || in["password"] != "app-pass" {
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"error":"AuthenticationRequired","message":"Invalid identifier or password"}`))
+				return
+			}
+			w.Write([]byte(`{"accessJwt":"jwt","refreshJwt":"r","handle":"blog.example.com","did":"did:plc:test"}`))
+		case "/xrpc/com.atproto.repo.uploadBlob":
+			if r.Header.Get("Authorization") != "Bearer jwt" {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			f.blobs = append(f.blobs, r.Header.Get("Content-Type"))
+			w.Write([]byte(`{"blob":{"$type":"blob","ref":{"$link":"bafy"},"mimeType":"image/jpeg","size":10}}`))
+		case "/xrpc/com.atproto.repo.createRecord":
+			var in map[string]any
+			json.NewDecoder(r.Body).Decode(&in)
+			f.records = append(f.records, in)
+			w.Write([]byte(`{"uri":"at://did:plc:test/app.bsky.feed.post/3abc","cid":"bafyrei"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(f.srv.Close)
+	return f
+}
+
+func TestBlueskySyndication(t *testing.T) {
+	a := testApp(t)
+	fake := newFakeBluesky(t)
+	a.bsky = newBluesky(Config{BlueskyHandle: "blog.example.com", BlueskyPassword: "app-pass", BlueskyService: fake.srv.URL})
+	ck := adminCookieFor(a)
+	post := func(path string, v url.Values) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("POST", path, strings.NewReader(v.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.AddCookie(ck)
+		return do(t, a, req)
+	}
+	get := func(slug string) Post {
+		var p Post
+		a.store.view(func(d *Data) { p = *d.postBySlug(slug) })
+		return p
+	}
+
+	// A cover to send as the card's picture.
+	var buf bytes.Buffer
+	jpeg.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 1600, 900)), nil)
+	im, err := a.addImage("cover.jpg", buf.Bytes(), time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Without the box nothing is sent.
+	post("/admin/posts", url.Values{"title_en": {"Quiet"}, "body_en": {"x"}, "action": {"publish"}})
+	if len(fake.records) != 0 {
+		t.Fatal("sent without the box")
+	}
+
+	// Publishing with the box sends the card once.
+	rec := post("/admin/posts", url.Values{"title_en": {"Loud"}, "body_en": {"Some **text**."}, "excerpt_en": {"An excerpt"},
+		"cover": {"/img/" + im.Key}, "title_ru": {"Громко"}, "body_ru": {"Текст"}, "bluesky": {"1"}, "action": {"publish"}})
+	if rec.Code != http.StatusSeeOther || !strings.HasSuffix(rec.Header().Get("Location"), "?m=bsky_sent") {
+		t.Fatalf("publish: %d %s", rec.Code, rec.Header().Get("Location"))
+	}
+	if len(fake.records) != 1 || len(fake.blobs) != 1 || fake.blobs[0] != "image/jpeg" {
+		t.Fatalf("records %d, blobs %v", len(fake.records), fake.blobs)
+	}
+	r := fake.records[0]
+	record := r["record"].(map[string]any)
+	ext := record["embed"].(map[string]any)["external"].(map[string]any)
+	if r["repo"] != "did:plc:test" || record["text"] != blueskyText || ext["uri"] != "https://blog.example.com/loud/" ||
+		ext["title"] != "Loud" || ext["description"] != "An excerpt" || ext["thumb"] == nil || record["langs"].([]any)[0] != "en" {
+		t.Errorf("record: %+v", r)
+	}
+	p := get("loud")
+	if p.Bluesky == nil || p.Bluesky.URL != "https://bsky.app/profile/did:plc:test/post/3abc" || p.BlueskyError != "" {
+		t.Errorf("recorded: %+v %q", p.Bluesky, p.BlueskyError)
+	}
+	// Saving again never sends twice, even with the box.
+	post("/admin/posts/"+p.ID, url.Values{"title_en": {"Loud"}, "body_en": {"fixed"}, "slug": {"loud"}, "bluesky": {"1"}})
+	a.sendDue()
+	if len(fake.records) != 1 {
+		t.Fatalf("sent twice: %d", len(fake.records))
+	}
+	if b := do(t, a, func() *http.Request {
+		req := httptest.NewRequest("GET", "/admin/posts/"+p.ID, nil)
+		req.AddCookie(ck)
+		return req
+	}()).Body.String(); !strings.Contains(b, "bsky.app/profile/did:plc:test/post/3abc") || strings.Contains(b, `name="bluesky"`) {
+		t.Errorf("editor after sending\n%s", b)
+	}
+
+	// A draft or a scheduled post waits until it is live.
+	post("/admin/posts", url.Values{"title_en": {"Draft"}, "body_en": {"x"}, "bluesky": {"1"}})
+	future := time.Now().Add(2 * time.Hour)
+	post("/admin/posts", url.Values{"title_en": {"Soon"}, "body_en": {"x"}, "bluesky": {"1"}, "action": {"publish"},
+		"published_at": {future.Format("2006-01-02T15:04")}})
+	a.sendDue()
+	if len(fake.records) != 1 {
+		t.Fatalf("draft or scheduled post sent early: %d", len(fake.records))
+	}
+	a.now = func() time.Time { return future.Add(time.Minute) }
+	a.sendDue()
+	if len(fake.records) != 2 || get("soon").Bluesky == nil {
+		t.Fatalf("scheduled post not sent when due: %d", len(fake.records))
+	}
+	a.now = time.Now
+
+	// A failure is recorded, not retried by the timer, retried on save.
+	fake.fail = true
+	rec = post("/admin/posts", url.Values{"title_en": {"Broken"}, "body_en": {"x"}, "bluesky": {"1"}, "action": {"publish"}})
+	if !strings.HasSuffix(rec.Header().Get("Location"), "?m=bsky_failed") || !strings.Contains(get("broken").BlueskyError, "AuthenticationRequired") {
+		t.Fatalf("failure: %s %q", rec.Header().Get("Location"), get("broken").BlueskyError)
+	}
+	fake.fail = false
+	a.sendDue()
+	if len(fake.records) != 2 {
+		t.Fatal("the timer retried a failed post")
+	}
+	id := get("broken").ID
+	post("/admin/posts/"+id, url.Values{"title_en": {"Broken"}, "body_en": {"x"}, "slug": {"broken"}, "bluesky": {"1"}})
+	if len(fake.records) != 3 || get("broken").Bluesky == nil || get("broken").BlueskyError != "" {
+		t.Fatalf("retry on save: %d %q", len(fake.records), get("broken").BlueskyError)
+	}
+}

@@ -37,6 +37,11 @@ type Post struct {
 	// want the other language get Translation when there is one, else this.
 	Lang        string       `json:"lang,omitempty"`
 	Translation *Translation `json:"translation,omitempty"`
+	// SendBluesky asks for a link on Bluesky once the post is live;
+	// Bluesky records it sent, BlueskyError the last failed try.
+	SendBluesky  bool         `json:"send_bluesky,omitempty"`
+	Bluesky      *Syndication `json:"bluesky,omitempty"`
+	BlueskyError string       `json:"bluesky_error,omitempty"`
 	// PublishedAt in the future keeps a non-draft post hidden until then.
 	PublishedAt time.Time `json:"published_at"`
 	CreatedAt   time.Time `json:"created_at"`

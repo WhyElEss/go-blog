@@ -115,6 +115,15 @@ var messages = map[string][2]string{
 	"icon":            {"Иконка сайта (квадратная)", "Site icon (square)"},
 	"per_page":        {"Записей на странице", "Posts per page"},
 	"words":           {"слов", "words"},
+	"bsky_send":       {"Отправить ссылку в Bluesky (оттуда Crossposter перешлёт её в X и Mastodon)", "Post the link to Bluesky (Crossposter forwards it to X and Mastodon)"},
+	"bsky_later":      {"Уйдёт в момент публикации.", "Goes out when the post is published."},
+	"bsky_now":        {"Уйдёт при сохранении.", "Goes out when you save."},
+	"bsky_done":       {"Bluesky: отправлено %s.", "Bluesky: sent %s."},
+	"bsky_open":       {"Открыть пост в Bluesky", "Open the Bluesky post"},
+	"bsky_error":      {"Не удалось отправить: %s. Сохраните запись с галочкой, чтобы попробовать ещё раз.", "Could not send: %s. Save with the box ticked to try again."},
+	"bsky_off":        {"Bluesky не настроен: нужны BLUESKY_HANDLE и BLUESKY_APP_PASSWORD в .env.", "Bluesky is not set up: BLUESKY_HANDLE and BLUESKY_APP_PASSWORD in .env are needed."},
+	"bsky_sent":       {"Сохранено и отправлено в Bluesky.", "Saved and posted to Bluesky."},
+	"bsky_failed":     {"Сохранено, но в Bluesky отправить не удалось — подробности ниже.", "Saved, but posting to Bluesky failed: see below."},
 }
 
 func t(lang, key string) string {

@@ -18,6 +18,9 @@ renders a page in a few milliseconds.
 - **Image placement** next to the text: left, right or centre, with an
   optional caption. Floats turn into full-width images on phones.
 - **YouTube**: a link on its own line becomes a privacy-enhanced player.
+- **Bluesky**: a box in the editor posts a link card for the post (cover,
+  title, excerpt) once it is published, scheduled posts included. Signs in
+  with an app password; a post is never sent twice.
 - **Posts and pages**: drafts, scheduled publication, tags with their own
   pages, standalone pages (About, Contact) outside the feed.
 - **Two languages, one URL**: a post can have both an English and a Russian
@@ -111,6 +114,9 @@ To update: `docker compose build --no-cache && docker compose up -d`.
 | `HOST_PORT` | Host port, 8096 by default. |
 | `TZ` | Time zone for publication dates, e.g. `America/Toronto`. |
 | `TRUST_PROXY_HEADERS` | `true` behind Cloudflare: the login rate limit reads `CF-Connecting-IP`. |
+| `BLUESKY_HANDLE` | Optional. The Bluesky account that announces new posts. |
+| `BLUESKY_APP_PASSWORD` | Its app password (Settings → App passwords in Bluesky), never the account password. |
+| `BLUESKY_SERVICE` | The account's server, `https://bsky.social` by default. |
 
 ## Moving from Ghost
 
