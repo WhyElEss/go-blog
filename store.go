@@ -33,13 +33,37 @@ type Post struct {
 	Tags    []string `json:"tags,omitempty"`
 	Page    bool     `json:"page,omitempty"`
 	Draft   bool     `json:"draft,omitempty"`
-	// Lang is the post's language (en, ru): the page's lang attribute and
-	// the date format.
-	Lang string `json:"lang,omitempty"`
+	// Lang is the language of Title, Body and Excerpt (en, ru). Readers who
+	// want the other language get Translation when there is one, else this.
+	Lang        string       `json:"lang,omitempty"`
+	Translation *Translation `json:"translation,omitempty"`
 	// PublishedAt in the future keeps a non-draft post hidden until then.
 	PublishedAt time.Time `json:"published_at"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// Translation is a post's text in the blog's other language, the one its
+// Lang is not. Cover, tags, date and URL are shared.
+type Translation struct {
+	Title   string `json:"title"`
+	Body    string `json:"body"`
+	Excerpt string `json:"excerpt,omitempty"`
+}
+
+// postText is a post in one language.
+type postText struct {
+	Lang, Title, Body, Excerpt string
+}
+
+// text returns the post in lang, or in its own language when it has no
+// translation into lang.
+func (p *Post) text(lang string) postText {
+	if p.Translation != nil && normLang(lang) != normLang(p.Lang) {
+		tr := p.Translation
+		return postText{Lang: otherLang(p.Lang), Title: tr.Title, Body: tr.Body, Excerpt: tr.Excerpt}
+	}
+	return postText{Lang: normLang(p.Lang), Title: p.Title, Body: p.Body, Excerpt: p.Excerpt}
 }
 
 // live reports whether visitors can see the post.
@@ -69,16 +93,21 @@ type Image struct {
 	Uploaded time.Time `json:"uploaded"`
 }
 
-// Link is a navigation entry in the header or footer.
+// Link is a navigation entry in the header or footer. Label is in the
+// site's default language, LabelAlt (optional) in the other one.
 type Link struct {
-	Label string `json:"label"`
-	URL   string `json:"url"`
+	Label    string `json:"label"`
+	LabelAlt string `json:"label_alt,omitempty"`
+	URL      string `json:"url"`
 }
 
 type Settings struct {
 	Title       string `json:"title"`
 	Description string `json:"description,omitempty"`
-	// Lang is the language of the site's own texts (en, ru).
+	// DescriptionAlt is the description in the language Lang is not.
+	DescriptionAlt string `json:"description_alt,omitempty"`
+	// Lang is the default language: for readers whose browser asks for
+	// neither Russian nor English, and for the feed at /rss/.
 	Lang         string `json:"lang"`
 	Nav          []Link `json:"nav,omitempty"`
 	FooterNav    []Link `json:"footer_nav,omitempty"`
@@ -95,6 +124,9 @@ type Data struct {
 	// Redirects maps Ghost's image paths (/content/images/2025/11/x.jpg)
 	// to the imported image keys.
 	Redirects map[string]string `json:"redirects,omitempty"`
+	// SlugRedirects maps the slug of a post merged into another one to
+	// where it went ("/other/?lang=ru").
+	SlugRedirects map[string]string `json:"slug_redirects,omitempty"`
 }
 
 func defaultSettings() Settings {
@@ -129,7 +161,7 @@ func (d *Data) imageUses(key string) int {
 	url := "/img/" + key
 	n := 0
 	for _, p := range d.Posts {
-		if strings.Contains(p.Body, url) || p.Cover == url {
+		if strings.Contains(p.Body, url) || p.Cover == url || (p.Translation != nil && strings.Contains(p.Translation.Body, url)) {
 			n++
 		}
 	}

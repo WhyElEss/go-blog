@@ -89,8 +89,32 @@
   const form = $("#editor");
   if (!form) return;
 
-  const body = $("#body");
+  // One title, text and excerpt per language; the tabs show one set, and
+  // the toolbar, uploads and preview work on the text in view.
+  const bodies = $$("textarea.md");
   const preview = $("#preview");
+  let body = bodies[0];
+  const tabs = $$("[data-tab]");
+  const markEmpty = () =>
+    tabs.forEach((tab) => {
+      const l = tab.dataset.tab;
+      const filled = $$('[data-pane="' + l + '"] textarea, input[data-pane="' + l + '"], textarea[data-pane="' + l + '"]').some((el) => el.value.trim());
+      tab.classList.toggle("empty", !filled);
+    });
+  function showTab(lang) {
+    tabs.forEach((tab) => {
+      const on = tab.dataset.tab === lang;
+      tab.classList.toggle("on", on);
+      tab.setAttribute("aria-selected", on);
+    });
+    $$("[data-pane]").forEach((el) => (el.hidden = el.dataset.pane !== lang));
+    body = bodies.find((b) => b.dataset.pane === lang);
+    preview.lang = lang;
+    refresh();
+  }
+  tabs.forEach((tab) => tab.addEventListener("click", () => showTab(tab.dataset.tab)));
+  form.addEventListener("input", markEmpty);
+  markEmpty();
 
   // Unsaved changes warning.
   let dirty = false;
@@ -117,10 +141,13 @@
       /* keep the old preview */
     }
   }
-  body.addEventListener("input", () => {
-    clearTimeout(timer);
-    timer = setTimeout(refresh, 300);
-  });
+  bodies.forEach((b) =>
+    b.addEventListener("input", () => {
+      clearTimeout(timer);
+      timer = setTimeout(refresh, 300);
+    })
+  );
+  preview.lang = body.lang;
   refresh();
 
   // insert replaces the selection with text and selects the part between
@@ -191,25 +218,27 @@
     })
   );
 
-  body.addEventListener("paste", (e) => {
-    const files = Array.from(e.clipboardData.files || []).filter((f) => f.type.startsWith("image/"));
-    if (!files.length) return;
-    e.preventDefault();
-    files.reduce((p, f) => p.then(() => uploadInto(f, "center")), Promise.resolve());
-  });
-  body.addEventListener("dragover", (e) => {
-    if (Array.from(e.dataTransfer.items || []).some((i) => i.kind === "file")) {
+  bodies.forEach((b) => {
+    b.addEventListener("paste", (e) => {
+      const files = Array.from(e.clipboardData.files || []).filter((f) => f.type.startsWith("image/"));
+      if (!files.length) return;
       e.preventDefault();
-      body.classList.add("drop");
-    }
-  });
-  body.addEventListener("dragleave", () => body.classList.remove("drop"));
-  body.addEventListener("drop", (e) => {
-    const files = Array.from(e.dataTransfer.files || []).filter((f) => f.type.startsWith("image/"));
-    body.classList.remove("drop");
-    if (!files.length) return;
-    e.preventDefault();
-    files.reduce((p, f) => p.then(() => uploadInto(f, "center")), Promise.resolve());
+      files.reduce((p, f) => p.then(() => uploadInto(f, "center")), Promise.resolve());
+    });
+    b.addEventListener("dragover", (e) => {
+      if (Array.from(e.dataTransfer.items || []).some((i) => i.kind === "file")) {
+        e.preventDefault();
+        b.classList.add("drop");
+      }
+    });
+    b.addEventListener("dragleave", () => b.classList.remove("drop"));
+    b.addEventListener("drop", (e) => {
+      const files = Array.from(e.dataTransfer.files || []).filter((f) => f.type.startsWith("image/"));
+      b.classList.remove("drop");
+      if (!files.length) return;
+      e.preventDefault();
+      files.reduce((p, f) => p.then(() => uploadInto(f, "center")), Promise.resolve());
+    });
   });
 
   // Cover.

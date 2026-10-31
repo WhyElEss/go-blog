@@ -57,9 +57,16 @@ type cdata struct {
 // links; the site's own pages use root-relative ones.
 var rootRelative = regexp.MustCompile(`(\s(?:src|href|srcset)=")/([^/"])`)
 
+// handleRSS serves /rss/ in the default language and /rss/{ru,en}/. Each
+// post is in the feed's language when it has that version, else in its own.
 func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 	origin := a.origin(r)
 	now := a.now()
+	code := r.PathValue("lang")
+	if code != "" && code != "ru" && code != "en" {
+		a.notFound(w, r)
+		return
+	}
 	var s Settings
 	var posts []Post
 	a.store.view(func(d *Data) {
@@ -73,12 +80,17 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	})
+	lang, self := normLang(s.Lang), "/rss/"
+	if code != "" {
+		lang, self = code, "/rss/"+code+"/"
+	}
 	ch := rssChannel{
-		Title: s.Title, Link: origin + "/", Description: s.Description, Language: s.Lang,
-		Self: atomLink{Href: origin + "/rss/", Rel: "self", Type: "application/rss+xml"},
+		Title: s.Title, Link: origin + "/", Description: pickText(lang, s.Lang, s.Description, s.DescriptionAlt), Language: lang,
+		Self: atomLink{Href: origin + self, Rel: "self", Type: "application/rss+xml"},
 	}
 	for _, p := range posts {
-		h, err := a.md.render(p.Body)
+		v := p.text(lang)
+		h, err := a.md.render(v.Body)
 		if err != nil {
 			log.Printf("rss render %s: %v", p.Slug, err)
 			continue
@@ -86,11 +98,16 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 		h = rootRelative.ReplaceAllString(h, "${1}"+origin+"/${2}")
 		// srcset lists several URLs; the regexp above fixes only the first.
 		h = srcsetFix.ReplaceAllString(h, "${1}"+origin+"/img/")
+		// The translation gets its own link, so readers subscribed to both
+		// feeds see two items; the original keeps the plain URL it always had.
 		link := origin + postURL(&p)
+		if v.Lang != normLang(p.Lang) {
+			link += "?lang=" + v.Lang
+		}
 		it := rssItem{
-			Title: p.Title, Link: link, GUID: rssGUID{Value: link, Permalink: true},
+			Title: v.Title, Link: link, GUID: rssGUID{Value: link, Permalink: true},
 			PubDate: p.PublishedAt.Format(time.RFC1123Z), Categories: p.Tags,
-			Description: a.postExcerpt(p), Encoded: cdata{h},
+			Description: a.textExcerpt(v), Encoded: cdata{h},
 		}
 		if p.Cover != "" {
 			it.Encoded.Value = `<p><img src="` + absURL(origin, p.Cover) + `" alt=""></p>` + it.Encoded.Value

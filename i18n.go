@@ -7,9 +7,10 @@ import (
 	"time"
 )
 
-// messages holds every UI text as {Russian, English}. The public pages use
-// the site's language setting; the admin follows the browser (cookie lang,
-// else Accept-Language, else English).
+// messages holds every UI text as {Russian, English}. Both the public pages
+// and the admin follow the reader: ?lang= on public pages, then the lang
+// cookie, then Accept-Language, then the site's default (English for the
+// admin).
 var messages = map[string][2]string{
 	// public
 	"newer":      {"← Новее", "← Newer posts"},
@@ -23,6 +24,11 @@ var messages = map[string][2]string{
 	"sched_note": {"Запланировано на %s: пока видите только вы.", "Scheduled for %s: only you can see it for now."},
 	"edit":       {"Редактировать", "Edit"},
 	"page_n":     {"страница %d", "page %d"},
+	"only_ru":    {"Этот текст есть только на русском.", "This post is only available in Russian."},
+	"only_en":    {"Этот текст есть только на английском.", "This post is only available in English."},
+	// read_in is written in the language it offers.
+	"read_in":   {"Читать на русском", "Read in English"},
+	"lang_name": {"Русский", "English"},
 
 	// admin
 	"admin":           {"Админка", "Admin"},
@@ -52,7 +58,10 @@ var messages = map[string][2]string{
 	"remove":          {"Убрать", "Remove"},
 	"tags":            {"Теги", "Tags"},
 	"tags_hint":       {"Через запятую.", "Comma-separated."},
-	"lang":            {"Язык", "Language"},
+	"lang":            {"Язык оригинала", "Original language"},
+	"lang_hint":       {"Его видят читатели, для чьего языка нет перевода.", "Shown to readers whose language has no translation."},
+	"tab_empty":       {"Перевода нет: заполните заголовок и текст, чтобы он появился.", "No translation: fill in the title and text to add one."},
+	"err_title_tr":    {"У перевода нужен заголовок.", "The translation needs a title."},
 	"published":       {"Дата публикации", "Publication date"},
 	"published_hint":  {"Пусто — сейчас. Дата в будущем — запись появится в это время.", "Empty: now. A future date publishes the post at that time."},
 	"status":          {"Статус", "Status"},
@@ -91,10 +100,12 @@ var messages = map[string][2]string{
 	"img_hint":        {"Загруженные картинки уменьшаются до 2000 px по ширине, плюс копии 600/1000/1400 px для телефонов. Метаданные (камера, GPS) удаляются.", "Uploads are scaled to at most 2000 px wide, plus 600/1000/1400 px copies for phones. Metadata (camera, GPS) is removed."},
 	"site_title":      {"Название блога", "Blog title"},
 	"site_desc":       {"Описание", "Description"},
-	"site_lang":       {"Язык интерфейса блога", "Language of the blog's own texts"},
+	"site_desc_alt":   {"Описание на втором языке", "Description in the second language"},
+	"site_lang":       {"Язык по умолчанию", "Default language"},
+	"site_lang_hint":  {"Для читателей, чей браузер не просит ни русский, ни английский, и для ленты /rss/. Описание и названия в меню пишутся на нём, переводы — на втором языке.", "For readers whose browser asks for neither Russian nor English, and for the feed at /rss/. The description and menu labels are in this language, their translations in the other."},
 	"nav":             {"Меню в шапке", "Header menu"},
 	"footer_nav":      {"Ссылки в подвале", "Footer links"},
-	"nav_hint":        {"По строке: Название | /адрес/", "One per line: Label | /url/"},
+	"nav_hint":        {"По строке: Название | /адрес/ или Название | Перевод | /адрес/", "One per line: Label | /url/ or Label | Translated label | /url/"},
 	"logo":            {"Логотип", "Logo"},
 	"logo_dark":       {"Логотип для тёмной темы", "Logo for dark mode"},
 	"icon":            {"Иконка сайта (квадратная)", "Site icon (square)"},
@@ -116,7 +127,21 @@ func t(lang, key string) string {
 func tf(lang, key string, args ...any) string { return fmt.Sprintf(t(lang, key), args...) }
 
 // detectLang picks the admin language.
-func detectLang(r *http.Request) string {
+func detectLang(r *http.Request) string { return prefLang(r, "en") }
+
+// readerLang picks the language a public page is shown in: ?lang= (a link
+// to one version), else the reader's choice and browser as for the admin,
+// else the site's default.
+func readerLang(r *http.Request, fallback string) string {
+	if l := r.URL.Query().Get("lang"); l == "ru" || l == "en" {
+		return l
+	}
+	return prefLang(r, normLang(fallback))
+}
+
+// prefLang reads the lang cookie set by the RU/EN switch, else the first
+// of Russian and English in Accept-Language, else fallback.
+func prefLang(r *http.Request, fallback string) string {
 	if c, err := r.Cookie("lang"); err == nil && (c.Value == "ru" || c.Value == "en") {
 		return c.Value
 	}
@@ -129,7 +154,7 @@ func detectLang(r *http.Request) string {
 			return "en"
 		}
 	}
-	return "en"
+	return fallback
 }
 
 var monthsRU = [...]string{"января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"}
@@ -147,4 +172,20 @@ func normLang(l string) string {
 		return "ru"
 	}
 	return "en"
+}
+
+// otherLang is the blog's language that l is not.
+func otherLang(l string) string {
+	if normLang(l) == "ru" {
+		return "en"
+	}
+	return "ru"
+}
+
+// pickText returns alt when lang is not the default language and alt is set.
+func pickText(lang, defaultLang, main, alt string) string {
+	if alt != "" && normLang(lang) != normLang(defaultLang) {
+		return alt
+	}
+	return main
 }

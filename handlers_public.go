@@ -12,8 +12,8 @@ import (
 
 // pageBase is embedded in every public page's data and read by the layout.
 type pageBase struct {
-	Lang        string // the page's language: the post's, else the site's
-	SiteLang    string // language of the blog's own texts
+	Lang        string // the page's language: the post's, else SiteLang
+	SiteLang    string // language of the blog's own texts: the reader's
 	Title       string // <title>
 	SiteTitle   string
 	Description string
@@ -23,6 +23,7 @@ type pageBase struct {
 	FooterNav   []Link
 	Path        string
 	Origin      string
+	FeedURL     string // the feed in SiteLang
 	OGTitle     string
 	OGImage     string // absolute URL
 	OGType      string
@@ -34,16 +35,34 @@ type pageBase struct {
 func (a *App) pageBase(r *http.Request, title string) pageBase {
 	var s Settings
 	a.store.view(func(d *Data) { s = d.Settings })
+	lang := readerLang(r, s.Lang)
 	b := pageBase{
-		Lang: s.Lang, SiteLang: s.Lang, Title: s.Title, SiteTitle: s.Title, Description: s.Description,
-		Logo: s.Logo, LogoDark: s.LogoDark, Nav: s.Nav, FooterNav: s.FooterNav, Path: r.URL.Path, Origin: a.origin(r),
-		OGTitle: s.Title, OGType: "website", Admin: a.isAdmin(r), Version: version, Year: a.now().Year(),
+		Lang: lang, SiteLang: lang, SiteTitle: s.Title, Description: pickText(lang, s.Lang, s.Description, s.DescriptionAlt),
+		Logo: s.Logo, LogoDark: s.LogoDark, Nav: localLinks(s.Nav, lang, s.Lang), FooterNav: localLinks(s.FooterNav, lang, s.Lang),
+		Path: r.URL.Path, Origin: a.origin(r), FeedURL: "/rss/", OGType: "website", Admin: a.isAdmin(r), Version: version, Year: a.now().Year(),
 	}
+	if lang != normLang(s.Lang) {
+		b.FeedURL = "/rss/" + lang + "/"
+	}
+	b.setTitle(title)
+	return b
+}
+
+func (b *pageBase) setTitle(title string) {
+	b.Title, b.OGTitle = b.SiteTitle, b.SiteTitle
 	if title != "" {
-		b.Title = title + " — " + s.Title
+		b.Title = title + " — " + b.SiteTitle
 		b.OGTitle = title
 	}
-	return b
+}
+
+// localLinks puts each link's label in lang.
+func localLinks(ls []Link, lang, defaultLang string) []Link {
+	out := make([]Link, len(ls))
+	for i, l := range ls {
+		out[i] = Link{Label: pickText(lang, defaultLang, l.Label, l.LabelAlt), URL: l.URL}
+	}
+	return out
 }
 
 type tagLink struct{ Name, URL string }
@@ -61,18 +80,17 @@ type card struct {
 
 func postURL(p *Post) string { return "/" + p.Slug + "/" }
 
-// toCard copies what the templates need. Call it outside the store lock:
-// the cover lookup takes it.
-func (a *App) toCard(p Post, now time.Time) card {
-	lang := normLang(p.Lang)
+// toCard copies what the templates need, with the text in v and dates in
+// uiLang. Call it outside the store lock: the cover lookup takes it.
+func (a *App) toCard(p Post, v postText, uiLang string, now time.Time) card {
 	c := card{
-		URL: postURL(&p), Title: p.Title, Excerpt: p.Excerpt, Lang: lang,
-		Date: formatDate(lang, p.PublishedAt), DateISO: p.PublishedAt.Format(time.RFC3339),
+		URL: postURL(&p), Title: v.Title, Excerpt: v.Excerpt, Lang: v.Lang,
+		Date: formatDate(uiLang, p.PublishedAt), DateISO: p.PublishedAt.Format(time.RFC3339),
 		Cover: p.Cover, Page: p.Page, Draft: p.Draft,
 		Scheduled: !p.Draft && p.PublishedAt.After(now),
 	}
 	if c.Scheduled {
-		c.ScheduledFor = formatDate(lang, p.PublishedAt) + " " + p.PublishedAt.Format("15:04")
+		c.ScheduledFor = formatDate(uiLang, p.PublishedAt) + " " + p.PublishedAt.Format("15:04")
 	}
 	for _, tg := range p.Tags {
 		c.Tags = append(c.Tags, tagLink{Name: tg, URL: "/tag/" + tagSlug(tg) + "/"})
@@ -90,12 +108,12 @@ func (a *App) toCard(p Post, now time.Time) card {
 	return c
 }
 
-// postExcerpt is the excerpt or the start of the text.
-func (a *App) postExcerpt(p Post) string {
-	if p.Excerpt != "" {
-		return p.Excerpt
+// textExcerpt is the excerpt or the start of the text.
+func (a *App) textExcerpt(v postText) string {
+	if v.Excerpt != "" {
+		return v.Excerpt
 	}
-	h, err := a.md.render(p.Body)
+	h, err := a.md.render(v.Body)
 	if err != nil {
 		return ""
 	}
@@ -162,11 +180,12 @@ func (a *App) handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	data.pageBase = a.pageBase(r, title)
 	if n > 1 {
-		data.Title += " — " + tf(data.Lang, "page_n", n)
+		data.Title += " — " + tf(data.SiteLang, "page_n", n)
 	}
 	for _, p := range list[start:end] {
-		c := a.toCard(p, now)
-		c.Excerpt = a.postExcerpt(p)
+		v := p.text(data.SiteLang)
+		c := a.toCard(p, v, data.SiteLang, now)
+		c.Excerpt = a.textExcerpt(v)
 		data.Posts = append(data.Posts, c)
 	}
 	if n > 2 {
@@ -184,6 +203,11 @@ type postPage struct {
 	pageBase
 	Post card
 	HTML template.HTML
+	// OnlyIn is set when the reader's language has no version: the
+	// message key saying which language the text is in.
+	OnlyIn string
+	// AltURL links the version in AltLang, for posts that have both.
+	AltURL, AltLang string
 	// EditURL is set for the signed-in admin.
 	EditURL string
 }
@@ -202,7 +226,22 @@ func (a *App) handleSlugPath(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// movedPost is where a post merged into another one went, or "".
+func (a *App) movedPost(slug string) string {
+	var to string
+	a.store.view(func(d *Data) {
+		if d.postBySlug(slug) == nil {
+			to = d.SlugRedirects[slug]
+		}
+	})
+	return to
+}
+
 func (a *App) handlePost(w http.ResponseWriter, r *http.Request, slug string) {
+	if to := a.movedPost(slug); to != "" {
+		http.Redirect(w, r, to, http.StatusMovedPermanently)
+		return
+	}
 	now := a.now()
 	var p Post
 	found := false
@@ -216,15 +255,26 @@ func (a *App) handlePost(w http.ResponseWriter, r *http.Request, slug string) {
 		a.notFound(w, r)
 		return
 	}
-	h, err := a.md.render(p.Body)
+	data := postPage{pageBase: a.pageBase(r, "")}
+	lang := data.SiteLang
+	v := p.text(lang)
+	h, err := a.md.render(v.Body)
 	if err != nil {
 		log.Printf("render %s: %v", p.Slug, err)
 		http.Error(w, "render error", http.StatusInternalServerError)
 		return
 	}
-	data := postPage{pageBase: a.pageBase(r, p.Title), Post: a.toCard(p, now), HTML: template.HTML(h)}
-	data.Lang = data.Post.Lang
-	data.Description = a.postExcerpt(p)
+	data.setTitle(v.Title)
+	data.Post, data.HTML = a.toCard(p, v, lang, now), template.HTML(h)
+	data.Lang = v.Lang
+	if v.Lang != lang {
+		data.OnlyIn = "only_" + v.Lang
+	}
+	if p.Translation != nil {
+		data.AltLang = otherLang(v.Lang)
+		data.AltURL = postURL(&p) + "?lang=" + data.AltLang
+	}
+	data.Description = a.textExcerpt(v)
 	data.OGType = "article"
 	if p.Cover != "" {
 		data.OGImage = absURL(data.Origin, p.Cover)
@@ -237,6 +287,10 @@ func (a *App) handlePost(w http.ResponseWriter, r *http.Request, slug string) {
 
 // handleSlashless sends /slug to /slug/, as Ghost's links had it.
 func (a *App) handleSlashless(w http.ResponseWriter, r *http.Request, slug string) {
+	if to := a.movedPost(slug); to != "" {
+		http.Redirect(w, r, to, http.StatusMovedPermanently)
+		return
+	}
 	found := false
 	a.store.view(func(d *Data) { found = d.postBySlug(slug) != nil })
 	if !found {
@@ -253,7 +307,7 @@ type messagePage struct {
 
 func (a *App) notFound(w http.ResponseWriter, r *http.Request) {
 	b := a.pageBase(r, "404")
-	a.render(w, http.StatusNotFound, "message", messagePage{pageBase: b, Text: t(b.Lang, "not_found")})
+	a.render(w, http.StatusNotFound, "message", messagePage{pageBase: b, Text: t(b.SiteLang, "not_found")})
 }
 
 func absURL(origin, u string) string {

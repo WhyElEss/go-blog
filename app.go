@@ -84,7 +84,9 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("GET /tag/{tag}/{$}", a.handleIndex)
 	mux.HandleFunc("GET /tag/{tag}/page/{n}/{$}", a.handleIndex)
 	mux.HandleFunc("GET /rss/{$}", a.handleRSS)
+	mux.HandleFunc("GET /rss/{lang}/{$}", a.handleRSS)
 	mux.HandleFunc("GET /rss", redirectTo("/rss/"))
+	mux.HandleFunc("GET /lang/{code}", a.handleLang)
 	// Posts and pages: /{slug}/. A {slug} pattern would clash with /static/
 	// and /img/, so the catch-all route dispatches.
 	mux.HandleFunc("GET /", a.handleSlugPath)
@@ -268,6 +270,8 @@ func (a *App) render(w http.ResponseWriter, status int, name string, data any) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
+	// One URL serves either language.
+	w.Header().Set("Vary", "Accept-Language, Cookie")
 	w.WriteHeader(status)
 	w.Write(buf.Bytes())
 }

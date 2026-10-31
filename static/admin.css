@@ -66,6 +66,14 @@ label.check input { width: auto; }
 
 .title-input { font-size: 1.6rem; font-weight: 700; border: 0; background: transparent; padding: .3rem 0; margin-bottom: .5rem; }
 .title-input:focus { outline: none; }
+.tabs { display: flex; gap: .25rem; margin-bottom: .4rem; }
+.tabs button { font: inherit; font-size: .9rem; border: 1px solid var(--line); background: var(--bg); color: var(--muted); padding: .3rem .8rem; border-radius: 8px; cursor: pointer; }
+.tabs button.on { color: var(--text); border-color: var(--muted); font-weight: 600; }
+.tabs button.empty:not(.on) { border-style: dashed; }
+.langs-tag { font-size: .72rem; color: var(--muted); letter-spacing: .03em; }
+.bodies { display: flex; }
+.bodies textarea { flex: 1; }
+[hidden] { display: none !important; }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; padding: .4rem; background: var(--bg); border: 1px solid var(--line); border-bottom: 0; border-radius: 10px 10px 0 0; }
 .toolbar button { font: inherit; font-size: .88rem; border: 1px solid transparent; background: none; color: var(--text); padding: .25rem .55rem; border-radius: 6px; cursor: pointer; min-width: 2rem; }
 .toolbar button:hover { background: var(--soft); border-color: var(--line); }

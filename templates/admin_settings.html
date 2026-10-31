@@ -2,10 +2,11 @@
 <h1>{{t .Lang "settings"}}</h1>
 <form class="settings" method="post" action="/admin/settings">
   <label>{{t .Lang "site_title"}}<input name="title" value="{{.S.Title}}" required></label>
+  <label>{{t .Lang "site_lang"}}<select name="lang"><option value="en"{{if ne .S.Lang "ru"}} selected{{end}}>English</option><option value="ru"{{if eq .S.Lang "ru"}} selected{{end}}>Русский</option></select><small>{{t .Lang "site_lang_hint"}}</small></label>
   <label>{{t .Lang "site_desc"}}<textarea name="description" rows="2">{{.S.Description}}</textarea></label>
-  <label>{{t .Lang "site_lang"}}<select name="lang"><option value="en"{{if ne .S.Lang "ru"}} selected{{end}}>English</option><option value="ru"{{if eq .S.Lang "ru"}} selected{{end}}>Русский</option></select></label>
+  <label>{{t .Lang "site_desc_alt"}}<textarea name="description_alt" rows="2">{{.S.DescriptionAlt}}</textarea></label>
   <label>{{t .Lang "per_page"}}<input type="number" name="posts_per_page" min="1" max="100" value="{{.S.PostsPerPage}}"></label>
-  <label>{{t .Lang "nav"}}<textarea name="nav" rows="5" placeholder="About | /about/">{{.NavText}}</textarea><small>{{t .Lang "nav_hint"}}</small></label>
+  <label>{{t .Lang "nav"}}<textarea name="nav" rows="5" placeholder="About | Обо мне | /about/">{{.NavText}}</textarea><small>{{t .Lang "nav_hint"}}</small></label>
   <label>{{t .Lang "footer_nav"}}<textarea name="footer_nav" rows="3" placeholder="Contact | /contact/">{{.FooterTxt}}</textarea><small>{{t .Lang "nav_hint"}}</small></label>
   <div class="cover-field">
     <label>{{t .Lang "logo"}}<input name="logo" id="logo" value="{{.S.Logo}}" placeholder="/img/…"></label>

@@ -276,7 +276,8 @@ func TestPublicPagesAndAdminFlow(t *testing.T) {
 		req.AddCookie(ck)
 		return do(t, a, req)
 	}
-	rec = post("/admin/posts", url.Values{"title": {"Первая запись"}, "body": {"Hello **world**.\n\n## Part {#part}\n"}, "tags": {"Vinyl, Music"}, "action": {"save"}})
+	// Written only in the Russian tab: the post is in Russian.
+	rec = post("/admin/posts", url.Values{"title_ru": {"Первая запись"}, "body_ru": {"Hello **world**.\n\n## Part {#part}\n"}, "tags": {"Vinyl, Music"}, "action": {"save"}})
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("create: %d %s", rec.Code, rec.Body)
 	}
@@ -284,7 +285,7 @@ func TestPublicPagesAndAdminFlow(t *testing.T) {
 	if rec := do(t, a, httptest.NewRequest("GET", "/pervaya-zapis/", nil)); rec.Code != http.StatusNotFound {
 		t.Fatalf("draft visible: %d", rec.Code)
 	}
-	rec = post("/admin/posts/"+id, url.Values{"title": {"Первая запись"}, "slug": {"pervaya-zapis"}, "body": {"Hello **world**.\n"}, "tags": {"Vinyl"}, "lang": {"ru"}, "action": {"publish"}})
+	rec = post("/admin/posts/"+id, url.Values{"title_ru": {"Первая запись"}, "slug": {"pervaya-zapis"}, "body_ru": {"Hello **world**.\n"}, "tags": {"Vinyl"}, "lang": {"ru"}, "action": {"publish"}})
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("publish: %d %s", rec.Code, rec.Body)
 	}
@@ -308,18 +309,18 @@ func TestPublicPagesAndAdminFlow(t *testing.T) {
 	}
 
 	// Slug clash and reserved slugs are refused.
-	rec = post("/admin/posts", url.Values{"title": {"Other"}, "slug": {"pervaya-zapis"}, "body": {"x"}})
+	rec = post("/admin/posts", url.Values{"title_en": {"Other"}, "slug": {"pervaya-zapis"}, "body_en": {"x"}})
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("slug clash: %d", rec.Code)
 	}
-	rec = post("/admin/posts", url.Values{"title": {"Admin"}, "slug": {"admin"}, "body": {"x"}})
+	rec = post("/admin/posts", url.Values{"title_en": {"Admin"}, "slug": {"admin"}, "body_en": {"x"}})
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("reserved slug: %d", rec.Code)
 	}
 
 	// A post scheduled for later stays hidden.
 	future := time.Now().Add(48 * time.Hour).Format("2006-01-02T15:04")
-	post("/admin/posts", url.Values{"title": {"Later"}, "body": {"soon"}, "published_at": {future}, "action": {"publish"}})
+	post("/admin/posts", url.Values{"title_en": {"Later"}, "body_en": {"soon"}, "published_at": {future}, "action": {"publish"}})
 	if rec := do(t, a, httptest.NewRequest("GET", "/later/", nil)); rec.Code != 404 {
 		t.Fatalf("scheduled visible: %d", rec.Code)
 	}
@@ -332,7 +333,7 @@ func TestPublicPagesAndAdminFlow(t *testing.T) {
 	}
 
 	// Cross-site posts are refused.
-	req = httptest.NewRequest("POST", "/admin/posts", strings.NewReader("title=x"))
+	req = httptest.NewRequest("POST", "/admin/posts", strings.NewReader("title_en=x"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Origin", "https://evil.example")
 	req.AddCookie(ck)
@@ -387,5 +388,169 @@ func TestUploadAndImageLifecycle(t *testing.T) {
 	}
 	if rec := do(t, a, httptest.NewRequest("GET", res.URL, nil)); rec.Code != 200 {
 		t.Fatal("file of an image in use was removed")
+	}
+}
+
+func TestBilingualPosts(t *testing.T) {
+	a := testApp(t)
+	ck := adminCookieFor(a)
+	post := func(path string, v url.Values) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("POST", path, strings.NewReader(v.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.AddCookie(ck)
+		return do(t, a, req)
+	}
+	get := func(path, acceptLang string, cookies ...*http.Cookie) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("GET", path, nil)
+		if acceptLang != "" {
+			req.Header.Set("Accept-Language", acceptLang)
+		}
+		for _, c := range cookies {
+			req.AddCookie(c)
+		}
+		return do(t, a, req)
+	}
+
+	rec := post("/admin/posts", url.Values{
+		"lang": {"en"}, "slug": {"turntables"}, "action": {"publish"},
+		"title_en": {"Turntables"}, "body_en": {"English text."},
+		"title_ru": {"Проигрыватели"}, "body_ru": {"Русский текст."}, "excerpt_ru": {"Анонс по-русски"},
+	})
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("create: %d %s", rec.Code, rec.Body)
+	}
+	if rec := post("/admin/posts", url.Values{"title_ru": {"Только по-русски"}, "body_ru": {"Текст."}, "action": {"publish"}}); rec.Code != http.StatusSeeOther {
+		t.Fatalf("create ru: %d %s", rec.Code, rec.Body)
+	}
+	// A translation needs its own title.
+	if rec := post("/admin/posts", url.Values{"title_en": {"X"}, "body_en": {"x"}, "body_ru": {"без заголовка"}}); rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("translation without title: %d", rec.Code)
+	}
+
+	ruCookie := &http.Cookie{Name: "lang", Value: "ru"}
+	cases := []struct {
+		name, path, accept string
+		cookies            []*http.Cookie
+		want, lang         string
+	}{
+		{"browser ru", "/turntables/", "ru-RU,ru;q=0.9,en;q=0.8", nil, "Русский текст.", "ru"},
+		{"browser en", "/turntables/", "en-CA,en;q=0.9", nil, "English text.", "en"},
+		{"neither: default", "/turntables/", "de-DE", nil, "English text.", "en"},
+		{"cookie beats browser", "/turntables/", "en-US", []*http.Cookie{ruCookie}, "Русский текст.", "ru"},
+		{"?lang beats cookie", "/turntables/?lang=en", "ru", []*http.Cookie{ruCookie}, "English text.", "en"},
+	}
+	for _, c := range cases {
+		rec := get(c.path, c.accept, c.cookies...)
+		b := rec.Body.String()
+		if rec.Code != 200 || !strings.Contains(b, c.want) || !strings.Contains(b, `<html lang="`+c.lang+`">`) {
+			t.Errorf("%s: %d, want %q in %s\n%s", c.name, rec.Code, c.want, c.lang, b)
+		}
+		if v := rec.Header().Get("Vary"); !strings.Contains(v, "Accept-Language") || !strings.Contains(v, "Cookie") {
+			t.Errorf("%s: Vary %q", c.name, v)
+		}
+	}
+	b := get("/turntables/", "ru").Body.String()
+	if !strings.Contains(b, `href="/turntables/?lang=en"`) || !strings.Contains(b, "Read in English") || !strings.Contains(b, "<title>Проигрыватели") || !strings.Contains(b, "Анонс по-русски") {
+		t.Errorf("ru page: link to English, title or excerpt missing\n%s", b)
+	}
+	// No English version: the Russian text with a note, in English.
+	b = get("/tolko-po-russki/", "en").Body.String()
+	if !strings.Contains(b, "Текст.") || !strings.Contains(b, "only available in Russian") || !strings.Contains(b, `<html lang="ru">`) {
+		t.Errorf("ru-only post for an English reader\n%s", b)
+	}
+	if b := get("/", "ru").Body.String(); !strings.Contains(b, "Проигрыватели") || strings.Contains(b, "Turntables") {
+		t.Errorf("index for ru reader\n%s", b)
+	}
+
+	// Feeds.
+	b = get("/rss/", "ru").Body.String()
+	if !strings.Contains(b, "<title>Turntables</title>") || !strings.Contains(b, "<link>https://blog.example.com/turntables/</link>") || !strings.Contains(b, "<language>en</language>") {
+		t.Errorf("default feed\n%s", b)
+	}
+	b = get("/rss/ru/", "").Body.String()
+	if !strings.Contains(b, "<title>Проигрыватели</title>") || !strings.Contains(b, "<link>https://blog.example.com/turntables/?lang=ru</link>") || !strings.Contains(b, "<language>ru</language>") || !strings.Contains(b, "Только по-русски") {
+		t.Errorf("ru feed\n%s", b)
+	}
+	if rec := get("/rss/de/", ""); rec.Code != 404 {
+		t.Errorf("unknown feed language: %d", rec.Code)
+	}
+
+	// The switch sets the cookie and goes back; foreign targets are refused.
+	rec = get("/lang/ru?next=/turntables/", "")
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/turntables/" || !strings.Contains(rec.Header().Get("Set-Cookie"), "lang=ru") {
+		t.Errorf("switch: %d %v", rec.Code, rec.Header())
+	}
+	for _, next := range []string{"//evil.example", "/\\evil.example", "https://evil.example"} {
+		if loc := get("/lang/en?next="+url.QueryEscape(next), "").Header().Get("Location"); loc != "/" {
+			t.Errorf("switch to %q went to %q", next, loc)
+		}
+	}
+
+	// The editor shows both versions.
+	var id string
+	a.store.view(func(d *Data) { id = d.postBySlug("turntables").ID })
+	b = get("/admin/posts/"+id, "", ck).Body.String()
+	if !strings.Contains(b, `name="body_ru"`) || !strings.Contains(b, "Русский текст.") || !strings.Contains(b, "English text.") {
+		t.Errorf("editor\n%s", b)
+	}
+	// Emptying a tab removes the translation.
+	post("/admin/posts/"+id, url.Values{"lang": {"en"}, "slug": {"turntables"}, "title_en": {"Turntables"}, "body_en": {"English text."}})
+	a.store.view(func(d *Data) {
+		if d.postBySlug("turntables").Translation != nil {
+			t.Error("translation kept after emptying its tab")
+		}
+	})
+
+	// Menu labels and the description follow the reader.
+	a.store.update(func(d *Data) error {
+		d.Settings.Nav = parseLinks("About | Обо мне | /about/\nMusic | /tag/music/")
+		d.Settings.Description, d.Settings.DescriptionAlt = "Records", "Пластинки"
+		return nil
+	})
+	b = get("/", "ru").Body.String()
+	if !strings.Contains(b, ">Обо мне<") || !strings.Contains(b, ">Music<") || !strings.Contains(b, "Пластинки") {
+		t.Errorf("ru menu\n%s", b)
+	}
+	if b := get("/", "en").Body.String(); !strings.Contains(b, ">About<") || !strings.Contains(b, "Records") {
+		t.Errorf("en menu\n%s", b)
+	}
+	if got := linksText(parseLinks("About | Обо мне | /about/")); got != "About | Обо мне | /about/\n" {
+		t.Errorf("links round trip: %q", got)
+	}
+}
+
+func TestMergePosts(t *testing.T) {
+	a := testApp(t)
+	now := time.Now().Add(-time.Hour)
+	a.store.update(func(d *Data) error {
+		d.Posts = append(d.Posts,
+			&Post{ID: "a", Slug: "vinyl", Title: "Vinyl", Body: "en", Lang: "en", Tags: []string{"Vinyl"}, PublishedAt: now},
+			&Post{ID: "b", Slug: "vinyl-ru", Title: "Винил", Body: "ru ![](/img/2025/11/x.jpg)", Lang: "ru", Tags: []string{"Vinyl", "Музыка"}, Cover: "/img/c.jpg", PublishedAt: now},
+		)
+		return nil
+	})
+	if err := a.store.update(func(d *Data) error { return mergePosts(d, "vinyl", "vinyl") }); err == nil {
+		t.Error("merged a post into itself")
+	}
+	if err := a.store.update(func(d *Data) error { return mergePosts(d, "vinyl", "vinyl-ru") }); err != nil {
+		t.Fatal(err)
+	}
+	a.store.view(func(d *Data) {
+		p := d.postBySlug("vinyl")
+		if len(d.Posts) != 1 || p.Translation == nil || p.Translation.Title != "Винил" || p.Cover != "/img/c.jpg" || len(p.Tags) != 2 {
+			t.Errorf("merged post: %+v %+v", p, p.Translation)
+		}
+		if d.imageUses("2025/11/x.jpg") != 1 {
+			t.Error("an image used only by the translation counts as unused")
+		}
+	})
+	for _, path := range []string{"/vinyl-ru/", "/vinyl-ru"} {
+		rec := do(t, a, httptest.NewRequest("GET", path, nil))
+		if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/vinyl/?lang=ru" {
+			t.Errorf("%s: %d %q", path, rec.Code, rec.Header().Get("Location"))
+		}
+	}
+	if err := a.store.update(func(d *Data) error { return mergePosts(d, "vinyl", "vinyl-ru") }); err == nil {
+		t.Error("merged a post that is gone")
 	}
 }

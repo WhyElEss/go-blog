@@ -20,7 +20,11 @@ renders a page in a few milliseconds.
 - **YouTube**: a link on its own line becomes a privacy-enhanced player.
 - **Posts and pages**: drafts, scheduled publication, tags with their own
   pages, standalone pages (About, Contact) outside the feed.
-- **RSS** at `/rss/` with the full text and absolute links.
+- **Two languages, one URL**: a post can have both an English and a Russian
+  version. Readers get the one their browser asks for, can switch with the
+  RU/EN buttons, and see the original when there is no translation.
+- **RSS** with the full text and absolute links: `/rss/` in the default
+  language, `/rss/en/` and `/rss/ru/`.
 - **Light and dark** themes following the reader's system, with an optional
   separate logo for dark mode.
 - **Admin panel** in English or Russian: posts, image library with usage
@@ -51,6 +55,34 @@ https://www.youtube.com/watch?v=gYc5zrXC52k
 
 An image becomes a figure only when it is alone in its paragraph. Raw HTML
 passes through: only the admin writes posts.
+
+## English and Russian
+
+Every post is written in its original language and may have a translation
+into the other one; the editor has a tab for each. Cover, tags, date and URL
+are shared. A page is shown in:
+
+1. the language in `?lang=en` or `?lang=ru`, which links to one version;
+2. else the reader's choice from the RU/EN switch (a cookie);
+3. else the first of Russian and English in the browser's `Accept-Language`;
+4. else the default language from the settings.
+
+A post without that version is shown in its original language with a note
+saying so. The blog's own texts (menus, dates, buttons) follow the same
+choice; menu labels and the description take a translation in the settings
+(`Label | Translated label | /url/`). Pages are sent with `Cache-Control:
+no-store` and `Vary: Accept-Language, Cookie`, so no cache serves one
+reader's language to another.
+
+Two existing posts that are translations of each other can be joined, with
+the blog stopped. The second one's URL then redirects to the first one's
+with `?lang=`:
+
+```bash
+docker compose stop blog
+docker compose run --rm blog merge <slug> <translation-slug>
+docker compose up -d
+```
 
 ## Running it
 

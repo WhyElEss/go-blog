@@ -21,6 +21,11 @@ main.wrap { flex: 1; padding-top: 2.5rem; padding-bottom: 3rem; }
 .nav { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; }
 .nav a { text-decoration: none; color: var(--muted); font-size: .95rem; }
 .nav a:hover { color: var(--text); }
+.head-right { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem 1.4rem; }
+.langs { display: flex; gap: .15rem; font-size: .8rem; }
+.langs a { text-decoration: none; color: var(--muted); padding: .15rem .4rem; border-radius: 6px; }
+.langs a:hover { color: var(--text); }
+.langs a.on { color: var(--text); font-weight: 600; background: var(--soft); }
 
 .site-desc { color: var(--muted); font-size: 1.1rem; margin: 0 0 2.5rem; }
 .list-head { font-size: 1.8rem; margin: 0 0 2rem; }

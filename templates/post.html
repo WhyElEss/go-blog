@@ -2,9 +2,11 @@
 <article class="post">
   {{if .Post.Draft}}<p class="notice">{{t .SiteLang "draft_note"}} <a href="{{.EditURL}}">{{t .SiteLang "edit"}}</a></p>
   {{else if .Post.Scheduled}}<p class="notice">{{printf (t .SiteLang "sched_note") .Post.ScheduledFor}} <a href="{{.EditURL}}">{{t .SiteLang "edit"}}</a></p>{{end}}
+  {{with .OnlyIn}}<p class="notice">{{t $.SiteLang .}}</p>{{end}}
   <header class="post-head">
     <h1>{{.Post.Title}}</h1>
-    {{if not .Post.Page}}<p class="meta"><time datetime="{{.Post.DateISO}}">{{.Post.Date}}</time>{{range .Post.Tags}} · <a href="{{.URL}}">{{.Name}}</a>{{end}}{{if and .EditURL (not .Post.Draft) (not .Post.Scheduled)}} · <a href="{{.EditURL}}">{{t .SiteLang "edit"}}</a>{{end}}</p>{{end}}
+    {{if not .Post.Page}}<p class="meta"><time datetime="{{.Post.DateISO}}">{{.Post.Date}}</time>{{range .Post.Tags}} · <a href="{{.URL}}">{{.Name}}</a>{{end}}{{with .AltURL}} · <a href="{{.}}" hreflang="{{$.AltLang}}" lang="{{$.AltLang}}">{{t $.AltLang "read_in"}}</a>{{end}}{{if and .EditURL (not .Post.Draft) (not .Post.Scheduled)}} · <a href="{{.EditURL}}">{{t .SiteLang "edit"}}</a>{{end}}</p>
+    {{else}}{{with .AltURL}}<p class="meta"><a href="{{.}}" hreflang="{{$.AltLang}}" lang="{{$.AltLang}}">{{t $.AltLang "read_in"}}</a></p>{{end}}{{end}}
   </header>
   {{if .Post.Cover}}<figure class="post-cover"><img src="{{.Post.Cover}}"{{if .Post.CoverSrcset}} srcset="{{.Post.CoverSrcset}}" sizes="(min-width: 1000px) 960px, calc(100vw - 32px)" width="{{.Post.CoverW}}" height="{{.Post.CoverH}}"{{end}} alt=""></figure>{{end}}
   <div class="content">

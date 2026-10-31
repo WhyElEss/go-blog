@@ -41,6 +41,8 @@ func (a *App) adminBase(r *http.Request, title string) adminBase {
 	return b
 }
 
+// handleLang serves the RU/EN switches, /lang/{code} on the site and
+// /admin/lang/{code}: one cookie for both.
 func (a *App) handleLang(w http.ResponseWriter, r *http.Request) {
 	code := r.PathValue("code")
 	if code != "ru" && code != "en" {
@@ -48,8 +50,11 @@ func (a *App) handleLang(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &http.Cookie{Name: "lang", Value: code, Path: "/", MaxAge: 365 * 24 * 3600, SameSite: http.SameSiteLaxMode})
 	next := r.URL.Query().Get("next")
-	if !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") {
-		next = "/admin/"
+	if !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") || strings.HasPrefix(next, "/\\") {
+		next = "/"
+		if strings.HasPrefix(r.URL.Path, "/admin/") {
+			next = "/admin/"
+		}
 	}
 	http.Redirect(w, r, next, http.StatusSeeOther)
 }
@@ -93,6 +98,7 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 type adminRow struct {
 	ID, Title, URL, Date, Status, StatusKey string
+	Langs                                   string // "EN", "EN · RU"
 }
 
 type postsPage struct {
@@ -106,7 +112,10 @@ func (a *App) handleAdminPosts(w http.ResponseWriter, r *http.Request) {
 	data := postsPage{adminBase: b}
 	a.store.view(func(d *Data) {
 		for _, p := range d.Posts {
-			row := adminRow{ID: p.ID, Title: p.Title, URL: postURL(p)}
+			row := adminRow{ID: p.ID, Title: p.Title, URL: postURL(p), Langs: strings.ToUpper(normLang(p.Lang))}
+			if p.Translation != nil {
+				row.Langs += " · " + strings.ToUpper(otherLang(p.Lang))
+			}
 			if !p.PublishedAt.IsZero() {
 				row.Date = p.PublishedAt.In(time.Local).Format("2006-01-02 15:04")
 			}
@@ -134,11 +143,20 @@ func (a *App) handleAdminPosts(w http.ResponseWriter, r *http.Request) {
 type editPage struct {
 	adminBase
 	Post      Post
+	Tabs      []editTab // the original language first
 	New       bool
 	TagsText  string
 	DateValue string // datetime-local
 	Live      bool
 }
+
+// editTab is the editor's text fields for one language.
+type editTab struct {
+	Lang, Name, Title, Body, Excerpt string
+}
+
+// editorLangs lists the blog's languages in the editor's tab order.
+var editorLangs = []string{"en", "ru"}
 
 func (a *App) editData(r *http.Request, p Post, isNew bool) editPage {
 	lang := detectLang(r)
@@ -150,6 +168,17 @@ func (a *App) editData(r *http.Request, p Post, isNew bool) editPage {
 		}
 	}
 	e := editPage{adminBase: a.adminBase(r, title), Post: p, New: isNew, TagsText: strings.Join(p.Tags, ", "), Live: p.live(a.now())}
+	e.Post.Lang = normLang(p.Lang)
+	for _, l := range []string{e.Post.Lang, otherLang(e.Post.Lang)} {
+		tab := editTab{Lang: l, Name: t(l, "lang_name")}
+		switch {
+		case l == e.Post.Lang:
+			tab.Title, tab.Body, tab.Excerpt = p.Title, p.Body, p.Excerpt
+		case p.Translation != nil:
+			tab.Title, tab.Body, tab.Excerpt = p.Translation.Title, p.Translation.Body, p.Translation.Excerpt
+		}
+		e.Tabs = append(e.Tabs, tab)
+	}
 	if !p.PublishedAt.IsZero() {
 		e.DateValue = p.PublishedAt.In(time.Local).Format("2006-01-02T15:04")
 	}
@@ -199,14 +228,33 @@ func (a *App) handleSave(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	now := a.now()
 	in := Post{
-		Title:   strings.TrimSpace(r.FormValue("title")),
-		Slug:    slugify(r.FormValue("slug")),
-		Body:    strings.ReplaceAll(r.FormValue("body"), "\r\n", "\n"),
-		Excerpt: strings.TrimSpace(r.FormValue("excerpt")),
-		Cover:   strings.TrimSpace(r.FormValue("cover")),
-		Tags:    splitTags(r.FormValue("tags")),
-		Page:    r.FormValue("page") == "1",
-		Lang:    normLang(r.FormValue("lang")),
+		Slug:  slugify(r.FormValue("slug")),
+		Cover: strings.TrimSpace(r.FormValue("cover")),
+		Tags:  splitTags(r.FormValue("tags")),
+		Page:  r.FormValue("page") == "1",
+		Lang:  normLang(r.FormValue("lang")),
+	}
+	// One set of text fields per language; the original language's is the
+	// post, the other's (when filled in) its translation. A post written
+	// only in the tab of the other language is in that language.
+	texts := map[string]Translation{}
+	for _, l := range editorLangs {
+		texts[l] = Translation{
+			Title:   strings.TrimSpace(r.FormValue("title_" + l)),
+			Body:    strings.ReplaceAll(r.FormValue("body_"+l), "\r\n", "\n"),
+			Excerpt: strings.TrimSpace(r.FormValue("excerpt_" + l)),
+		}
+	}
+	empty := func(tr Translation) bool {
+		return tr.Title == "" && strings.TrimSpace(tr.Body) == "" && tr.Excerpt == ""
+	}
+	if empty(texts[in.Lang]) && !empty(texts[otherLang(in.Lang)]) {
+		in.Lang = otherLang(in.Lang)
+	}
+	main, alt := texts[in.Lang], texts[otherLang(in.Lang)]
+	in.Title, in.Body, in.Excerpt = main.Title, main.Body, main.Excerpt
+	if !empty(alt) {
+		in.Translation = &alt
 	}
 	if in.Slug == "" {
 		in.Slug = slugify(in.Title)
@@ -226,6 +274,10 @@ func (a *App) handleSave(w http.ResponseWriter, r *http.Request) {
 	action := r.FormValue("action")
 	if in.Title == "" {
 		a.saveError(w, r, in, id, t(lang, "err_title"))
+		return
+	}
+	if in.Translation != nil && in.Translation.Title == "" {
+		a.saveError(w, r, in, id, t(lang, "err_title_tr"))
 		return
 	}
 	if reservedSlugs[in.Slug] {
@@ -266,6 +318,7 @@ func (a *App) handleSave(w http.ResponseWriter, r *http.Request) {
 			p.PublishedAt = now.Truncate(time.Minute)
 		}
 		p.Title, p.Slug, p.Body, p.Excerpt, p.Cover, p.Tags, p.Page, p.Lang = in.Title, in.Slug, in.Body, in.Excerpt, in.Cover, in.Tags, in.Page, in.Lang
+		p.Translation = in.Translation
 		p.Draft = draft
 		p.UpdatedAt = now
 		if id == "" {
@@ -469,23 +522,38 @@ type settingsPage struct {
 func linksText(ls []Link) string {
 	var b strings.Builder
 	for _, l := range ls {
-		fmt.Fprintf(&b, "%s | %s\n", l.Label, l.URL)
+		if l.LabelAlt != "" {
+			fmt.Fprintf(&b, "%s | %s | %s\n", l.Label, l.LabelAlt, l.URL)
+		} else {
+			fmt.Fprintf(&b, "%s | %s\n", l.Label, l.URL)
+		}
 	}
 	return b.String()
 }
 
+// parseLinks reads "Label | /url/" or "Label | Translated label | /url/"
+// lines.
 func parseLinks(s string) []Link {
 	var out []Link
 	for _, line := range strings.Split(s, "\n") {
-		label, u, ok := strings.Cut(line, "|")
-		label, u = strings.TrimSpace(label), strings.TrimSpace(u)
-		if !ok || label == "" || u == "" {
+		parts := strings.Split(line, "|")
+		for i := range parts {
+			parts[i] = strings.TrimSpace(parts[i])
+		}
+		var label, alt, u string
+		switch len(parts) {
+		case 2:
+			label, u = parts[0], parts[1]
+		case 3:
+			label, alt, u = parts[0], parts[1], parts[2]
+		}
+		if label == "" || u == "" {
 			continue
 		}
 		if pu, err := url.Parse(u); err != nil || (pu.Scheme != "" && pu.Scheme != "https" && pu.Scheme != "http" && pu.Scheme != "mailto") {
 			continue
 		}
-		out = append(out, Link{Label: label, URL: u})
+		out = append(out, Link{Label: label, LabelAlt: alt, URL: u})
 	}
 	return out
 }
@@ -503,15 +571,16 @@ func (a *App) handleSettings(w http.ResponseWriter, r *http.Request) {
 		per = 10
 	}
 	s := Settings{
-		Title:        strings.TrimSpace(r.FormValue("title")),
-		Description:  strings.TrimSpace(r.FormValue("description")),
-		Lang:         normLang(r.FormValue("lang")),
-		Nav:          parseLinks(r.FormValue("nav")),
-		FooterNav:    parseLinks(r.FormValue("footer_nav")),
-		Logo:         strings.TrimSpace(r.FormValue("logo")),
-		LogoDark:     strings.TrimSpace(r.FormValue("logo_dark")),
-		Icon:         strings.TrimSpace(r.FormValue("icon")),
-		PostsPerPage: per,
+		Title:          strings.TrimSpace(r.FormValue("title")),
+		Description:    strings.TrimSpace(r.FormValue("description")),
+		DescriptionAlt: strings.TrimSpace(r.FormValue("description_alt")),
+		Lang:           normLang(r.FormValue("lang")),
+		Nav:            parseLinks(r.FormValue("nav")),
+		FooterNav:      parseLinks(r.FormValue("footer_nav")),
+		Logo:           strings.TrimSpace(r.FormValue("logo")),
+		LogoDark:       strings.TrimSpace(r.FormValue("logo_dark")),
+		Icon:           strings.TrimSpace(r.FormValue("icon")),
+		PostsPerPage:   per,
 	}
 	if s.Title == "" {
 		s.Title = "Blog"

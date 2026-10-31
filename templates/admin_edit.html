@@ -11,7 +11,12 @@
     </div>
   </div>
 
-  <input class="title-input" name="title" value="{{.Post.Title}}" placeholder="{{t .Lang "title"}}" required>
+  <div class="tabs" role="tablist">
+    {{range $i, $tab := .Tabs}}<button type="button" role="tab" data-tab="{{.Lang}}" aria-selected="{{if eq $i 0}}true{{else}}false{{end}}"{{if eq $i 0}} class="on"{{end}}>{{.Name}}</button>{{end}}
+  </div>
+  {{range $i, $tab := .Tabs}}
+  <input class="title-input" name="title_{{.Lang}}" value="{{.Title}}" placeholder="{{t $.Lang "title"}} · {{.Name}}" lang="{{.Lang}}" data-pane="{{.Lang}}"{{if ne $i 0}} hidden{{end}}>
+  {{end}}
 
   <div class="toolbar" role="toolbar">
     <button type="button" data-md="bold" title="Bold (⌘B)"><b>B</b></button>
@@ -30,7 +35,9 @@
   <input type="file" id="img-file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" hidden>
 
   <div class="split">
-    <textarea id="body" name="body" spellcheck="true" lang="{{.Post.Lang}}" placeholder="{{t .Lang "body"}}">{{.Post.Body}}</textarea>
+    <div class="bodies">
+      {{range $i, $tab := .Tabs}}<textarea class="md" name="body_{{.Lang}}" spellcheck="true" lang="{{.Lang}}" placeholder="{{if eq $i 0}}{{t $.Lang "body"}}{{else}}{{t $.Lang "tab_empty"}}{{end}}" data-pane="{{.Lang}}"{{if ne $i 0}} hidden{{end}}>{{.Body}}</textarea>{{end}}
+    </div>
     <div class="preview-wrap">
       <div class="preview-label">{{t .Lang "preview"}}</div>
       <div id="preview" class="content"></div>
@@ -42,8 +49,8 @@
     <label>{{t .Lang "slug"}}<input name="slug" value="{{.Post.Slug}}" placeholder="{{t .Lang "slug_hint"}}"></label>
     <label>{{t .Lang "tags"}}<input name="tags" value="{{.TagsText}}" placeholder="{{t .Lang "tags_hint"}}"></label>
     <label>{{t .Lang "published"}}<input type="datetime-local" name="published_at" value="{{.DateValue}}"><small>{{t .Lang "published_hint"}}</small></label>
-    <label>{{t .Lang "lang"}}<select name="lang"><option value="en"{{if ne .Post.Lang "ru"}} selected{{end}}>English</option><option value="ru"{{if eq .Post.Lang "ru"}} selected{{end}}>Русский</option></select></label>
-    <label class="wide">{{t .Lang "excerpt"}}<textarea name="excerpt" rows="2">{{.Post.Excerpt}}</textarea><small>{{t .Lang "excerpt_hint"}}</small></label>
+    <label>{{t .Lang "lang"}}<select name="lang"><option value="en"{{if ne .Post.Lang "ru"}} selected{{end}}>English</option><option value="ru"{{if eq .Post.Lang "ru"}} selected{{end}}>Русский</option></select><small>{{t .Lang "lang_hint"}}</small></label>
+    {{range $i, $tab := .Tabs}}<label class="wide" data-pane="{{.Lang}}"{{if ne $i 0}} hidden{{end}}>{{t $.Lang "excerpt"}} · {{.Name}}<textarea name="excerpt_{{.Lang}}" rows="2" lang="{{.Lang}}">{{.Excerpt}}</textarea><small>{{t $.Lang "excerpt_hint"}}</small></label>{{end}}
     <div class="wide cover-field">
       <label>{{t .Lang "cover"}}<input name="cover" id="cover" value="{{.Post.Cover}}" placeholder="/img/…"></label>
       <button type="button" class="btn" data-cover-upload>{{t .Lang "upload"}}</button>

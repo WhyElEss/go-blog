@@ -4,7 +4,7 @@
   <tbody>
   {{range .Rows}}
   <tr>
-    <td><a href="/admin/posts/{{.ID}}">{{.Title}}</a> <a class="muted" href="{{.URL}}" target="_blank" title="{{.URL}}">↗</a></td>
+    <td><a href="/admin/posts/{{.ID}}">{{.Title}}</a> <span class="langs-tag">{{.Langs}}</span> <a class="muted" href="{{.URL}}" target="_blank" title="{{.URL}}">↗</a></td>
     <td><span class="badge {{.StatusKey}}">{{.Status}}</span></td>
     <td class="nowrap">{{.Date}}</td>
   </tr>

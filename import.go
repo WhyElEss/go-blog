@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -149,5 +150,65 @@ func runImport(args []string) error {
 		log.Printf("post %s added", p.Slug)
 	}
 	log.Printf("import done: %d posts added, %d images", added, len(keys))
+	return nil
+}
+
+// runMerge makes one bilingual post of two: the second becomes the first
+// one's translation and is removed, and its URL redirects to the first
+// one's in that language. Run it with the blog stopped, as the import.
+//
+//	blog merge <slug> <translation slug>
+func runMerge(args []string) error {
+	if len(args) != 2 {
+		return errors.New("usage: blog merge <slug> <translation slug>")
+	}
+	store, err := openStore(filepath.Join(env("DATA_DIR", "./data"), "blog.json"))
+	if err != nil {
+		return err
+	}
+	return store.update(func(d *Data) error { return mergePosts(d, args[0], args[1]) })
+}
+
+func mergePosts(d *Data, slug, trSlug string) error {
+	p, tr := d.postBySlug(slug), d.postBySlug(trSlug)
+	switch {
+	case p == nil:
+		return fmt.Errorf("no post %q", slug)
+	case tr == nil:
+		return fmt.Errorf("no post %q", trSlug)
+	case p == tr:
+		return errors.New("a post cannot be its own translation")
+	case normLang(p.Lang) == normLang(tr.Lang):
+		return fmt.Errorf("both posts are in %q", normLang(p.Lang))
+	case p.Translation != nil:
+		return fmt.Errorf("%q already has a translation", slug)
+	case tr.Translation != nil:
+		return fmt.Errorf("%q has a translation of its own", trSlug)
+	}
+	p.Translation = &Translation{Title: tr.Title, Body: tr.Body, Excerpt: tr.Excerpt}
+	if p.Cover == "" {
+		p.Cover = tr.Cover
+	}
+	for _, tg := range tr.Tags {
+		if !p.hasTag(tagSlug(tg)) {
+			p.Tags = append(p.Tags, tg)
+		}
+	}
+	if tr.UpdatedAt.After(p.UpdatedAt) {
+		p.UpdatedAt = tr.UpdatedAt
+	}
+	d.Posts = slices.DeleteFunc(d.Posts, func(q *Post) bool { return q == tr })
+	if d.SlugRedirects == nil {
+		d.SlugRedirects = map[string]string{}
+	}
+	to := postURL(p) + "?lang=" + normLang(tr.Lang)
+	d.SlugRedirects[trSlug] = to
+	// Earlier redirects to the removed post follow it.
+	for k, v := range d.SlugRedirects {
+		if strings.HasPrefix(v, "/"+trSlug+"/") {
+			d.SlugRedirects[k] = to
+		}
+	}
+	log.Printf("merged %s (%s) into %s (%s); /%s/ redirects to %s", trSlug, normLang(tr.Lang), slug, normLang(p.Lang), trSlug, to)
 	return nil
 }
