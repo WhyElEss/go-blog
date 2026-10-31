@@ -122,6 +122,25 @@ To update: `docker compose build --no-cache && docker compose up -d`.
 | `BLUESKY_APP_PASSWORD` | Its app password (Settings → App passwords in Bluesky), never the account password. |
 | `BLUESKY_SERVICE` | The account's server, `https://bsky.social` by default. |
 
+### Backups
+
+[`tools/backup.sh`](tools/backup.sh) archives the data volume together with
+`docker-compose.yml` and `.env`, while the blog keeps running, and keeps the
+ten newest archives. Run it from cron:
+
+```
+30 3 * * * /bin/bash /home/you/cron-tasks/backup.sh
+```
+
+Restore with the blog stopped:
+
+```bash
+docker compose stop blog
+docker run --rm --user 0 -v blog_data:/data -v ~/blog-backups:/b:ro \
+  --entrypoint sh blog:local -c 'cd /data && tar -xzf /b/<archive> --strip-components=1 data/'
+docker compose up -d
+```
+
 ### Signing in
 
 `ADMIN_USER` and `ADMIN_PASSWORD_HASH` are the first account. The admin's
