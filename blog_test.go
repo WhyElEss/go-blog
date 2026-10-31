@@ -764,3 +764,137 @@ func TestBlueskySyndication(t *testing.T) {
 		t.Fatalf("retry on save: %d %q", len(fake.records), get("broken").BlueskyError)
 	}
 }
+
+// The published RFC 6238 SHA-1 vectors, last six of the eight digits: the
+// only proof that this is TOTP and not merely self-consistent.
+func TestTOTPMatchesTheRFCVectors(t *testing.T) {
+	const secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ" // "12345678901234567890"
+	for _, c := range []struct {
+		unix int64
+		want string
+	}{{59, "287082"}, {1111111109, "081804"}, {1111111111, "050471"}, {1234567890, "005924"}, {2000000000, "279037"}, {20000000000, "353130"}} {
+		if got, err := totpCode(secret, time.Unix(c.unix, 0)); err != nil || got != c.want {
+			t.Errorf("T=%d: %s %v, want %s", c.unix, got, err, c.want)
+		}
+	}
+	at := time.Unix(1234567890, 0)
+	code, _ := totpCode(secret, at)
+	if checkTOTP("gezd gnbv gy3t qojq GEZDGNBVGY3TQOJQ", code, at, 0) == 0 {
+		t.Error("spaced lower-case secret refused")
+	}
+	if step := checkTOTP(secret, code, at, 0); step == 0 || checkTOTP(secret, code, at, step) != 0 {
+		t.Error("a used code was accepted again")
+	}
+	if checkTOTP(secret, code, at.Add(90*time.Second), 0) != 0 {
+		t.Error("a code three steps old was accepted")
+	}
+}
+
+func TestSecurity(t *testing.T) {
+	a := testApp(t)
+	clock := time.Now()
+	a.now = func() time.Time { return clock }
+	form := func(path string, v url.Values, cookies ...*http.Cookie) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("POST", path, strings.NewReader(v.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		for _, c := range cookies {
+			req.AddCookie(c)
+		}
+		return do(t, a, req)
+	}
+	session := func(rec *httptest.ResponseRecorder) *http.Cookie {
+		t.Helper()
+		for _, c := range rec.Result().Cookies() {
+			if c.Name == adminCookie {
+				return c
+			}
+		}
+		t.Fatalf("no session cookie: %d %v", rec.Code, rec.Header())
+		return nil
+	}
+	in := func(c *http.Cookie) bool {
+		req := httptest.NewRequest("GET", "/admin/", nil)
+		req.AddCookie(c)
+		return do(t, a, req).Code == 200
+	}
+	a.loginLimit = newLimiter(1000, time.Minute)
+
+	// User name and password from .env.
+	if rec := form("/admin/login", url.Values{"user": {"nobody"}, "password": {"correct horse"}}); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("wrong user: %d", rec.Code)
+	}
+	phone := session(form("/admin/login", url.Values{"user": {"Admin"}, "password": {"correct horse"}}))
+	laptop := session(form("/admin/login", url.Values{"user": {"admin"}, "password": {"correct horse"}}))
+	if !in(phone) || !in(laptop) {
+		t.Fatal("sessions not valid")
+	}
+
+	// A new user name and password need the current one; other devices go.
+	if rec := form("/admin/security/account", url.Values{"user": {"stas"}, "new": {"a much longer one"}, "new2": {"a much longer one"}, "current": {"wrong"}}, laptop); !strings.Contains(rec.Header().Get("Location"), "e=sec_bad_current") {
+		t.Fatalf("change without the current password: %s", rec.Header().Get("Location"))
+	}
+	if rec := form("/admin/security/account", url.Values{"user": {"stas"}, "new": {"short"}, "new2": {"short"}, "current": {"correct horse"}}, laptop); !strings.Contains(rec.Header().Get("Location"), "e=sec_short") {
+		t.Fatalf("short password: %s", rec.Header().Get("Location"))
+	}
+	rec := form("/admin/security/account", url.Values{"user": {"stas"}, "new": {"a much longer one"}, "new2": {"a much longer one"}, "current": {"correct horse"}}, laptop)
+	laptop = session(rec)
+	if in(phone) || !in(laptop) {
+		t.Fatal("the change did not sign the other device out, or this one")
+	}
+	if rec := form("/admin/login", url.Values{"user": {"admin"}, "password": {"correct horse"}}); rec.Code != http.StatusUnauthorized {
+		t.Fatal("the old account still signs in")
+	}
+
+	// 2FA: the setup page shows a secret; the first code turns it on.
+	form("/admin/security/totp/start", nil, laptop)
+	req := httptest.NewRequest("GET", "/admin/security", nil)
+	req.AddCookie(laptop)
+	page := do(t, a, req).Body.String()
+	_, rest, _ := strings.Cut(page, `<code class="secret">`)
+	secret, _, _ := strings.Cut(rest, "<")
+	if secret == "" || !strings.Contains(page, `data-qr="otpauth://totp/blog.example.com:stas?`) {
+		t.Fatalf("setup page\n%s", page)
+	}
+	phone = session(form("/admin/login", url.Values{"user": {"stas"}, "password": {"a much longer one"}}))
+	code, _ := totpCode(secret, clock)
+	if rec := form("/admin/security/totp/enable", url.Values{"code": {"000000"}}, laptop); !strings.Contains(rec.Header().Get("Location"), "e=sec_bad_code") {
+		t.Fatal("a wrong first code turned 2FA on")
+	}
+	laptop = session(form("/admin/security/totp/enable", url.Values{"code": {code}}, laptop))
+	if in(phone) || !in(laptop) || !a.totpOn() {
+		t.Fatal("turning 2FA on did not sign the other device out")
+	}
+
+	// Signing in now takes a code, once.
+	clock = clock.Add(30 * time.Second)
+	code, _ = totpCode(secret, clock)
+	if rec := form("/admin/login", url.Values{"user": {"stas"}, "password": {"a much longer one"}}); rec.Code != http.StatusUnauthorized {
+		t.Fatal("signed in without a code")
+	}
+	form("/admin/login", url.Values{"user": {"stas"}, "password": {"a much longer one"}, "code": {code}})
+	if rec := form("/admin/login", url.Values{"user": {"stas"}, "password": {"a much longer one"}, "code": {code}}); rec.Code != http.StatusUnauthorized {
+		t.Fatal("the same code worked twice")
+	}
+
+	// The account survives a restart; a broken auth.json stops the blog.
+	b, err := newApp(a.cfg)
+	if err != nil || !b.totpOn() {
+		t.Fatalf("reload: %v", err)
+	}
+	if u, _, _ := b.credentials(); u != "stas" {
+		t.Errorf("reloaded user %q", u)
+	}
+	os.WriteFile(filepath.Join(a.cfg.DataDir, "auth.json"), []byte("{broken"), 0o600)
+	if _, err := newApp(a.cfg); err == nil {
+		t.Error("started with a broken auth.json")
+	}
+	os.Remove(filepath.Join(a.cfg.DataDir, "auth.json"))
+
+	// Turning 2FA off asks for the password and a code.
+	clock = clock.Add(30 * time.Second)
+	code, _ = totpCode(secret, clock)
+	if rec := form("/admin/security/totp/disable", url.Values{"current": {"a much longer one"}}, laptop); !strings.Contains(rec.Header().Get("Location"), "e=sec_bad_code") {
+		t.Fatalf("2FA off without a code: %s", rec.Header().Get("Location"))
+	}
+	form("/admin/security/totp/disable", url.Values{"current": {"a much longer one"}, "code": {code}}, laptop)
+}

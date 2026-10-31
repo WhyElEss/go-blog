@@ -70,7 +70,14 @@ func (a *App) handleLoginForm(w http.ResponseWriter, r *http.Request) {
 	}
 	b := a.adminBase(r, t(detectLang(r), "login"))
 	b.NoNav = true
-	a.render(w, http.StatusOK, "admin_login", b)
+	a.render(w, http.StatusOK, "admin_login", loginPage{b, a.totpOn(), ""})
+}
+
+// loginPage asks for the code field only when 2FA is on.
+type loginPage struct {
+	adminBase
+	TOTP bool
+	User string
 }
 
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -79,19 +86,15 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	b.NoNav = true
 	if !a.loginLimit.allow(a.clientIP(r)) {
 		b.Error = t(lang, "too_many")
-		a.render(w, http.StatusTooManyRequests, "admin_login", b)
+		a.render(w, http.StatusTooManyRequests, "admin_login", loginPage{b, a.totpOn(), r.FormValue("user")})
 		return
 	}
-	if !a.adminHash.verify(r.FormValue("password")) {
+	if !a.verifyLogin(r.FormValue("user"), r.FormValue("password"), r.FormValue("code")) {
 		b.Error = t(lang, "bad_password")
-		a.render(w, http.StatusUnauthorized, "admin_login", b)
+		a.render(w, http.StatusUnauthorized, "admin_login", loginPage{b, a.totpOn(), r.FormValue("user")})
 		return
 	}
-	exp := a.now().Add(sessionMaxAge)
-	http.SetCookie(w, &http.Cookie{
-		Name: adminCookie, Value: a.signSession(exp), Path: "/", Expires: exp,
-		HttpOnly: true, Secure: isHTTPS(r), SameSite: http.SameSiteLaxMode,
-	})
+	a.setSession(w, r)
 	http.Redirect(w, r, "/admin/", http.StatusSeeOther)
 }
 

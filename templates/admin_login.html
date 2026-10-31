@@ -1,7 +1,9 @@
 {{define "content"}}
 <form class="login" method="post" action="/admin/login">
   <h1>{{t .Lang "login"}}</h1>
-  <label>{{t .Lang "password"}}<input type="password" name="password" autocomplete="current-password" required autofocus></label>
+  <label>{{t .Lang "user"}}<input name="user" value="{{.User}}" autocomplete="username" autocapitalize="none" spellcheck="false" required{{if not .User}} autofocus{{end}}></label>
+  <label>{{t .Lang "password"}}<input type="password" name="password" autocomplete="current-password" required{{if .User}} autofocus{{end}}></label>
+  {{if .TOTP}}<label>{{t .Lang "code"}}<input name="code" inputmode="numeric" pattern="[0-9 ]*" maxlength="7" autocomplete="one-time-code" required></label>{{end}}
   <button class="btn primary">{{t .Lang "sign_in"}}</button>
 </form>
 {{end}}

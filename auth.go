@@ -86,8 +86,10 @@ func loadSessionKey(path string) ([]byte, error) {
 	return b, os.WriteFile(path, b, 0o600)
 }
 
+// signSession makes the admin cookie: expiry and account epoch, signed.
+// Raising the epoch (any change on the Security page) ends every session.
 func (a *App) signSession(exp time.Time) string {
-	payload := strconv.FormatInt(exp.Unix(), 10)
+	payload := strconv.FormatInt(exp.Unix(), 10) + "." + strconv.FormatInt(a.epoch(), 10)
 	m := hmac.New(sha256.New, a.sessionKey)
 	m.Write([]byte(payload))
 	return payload + "." + b64.EncodeToString(m.Sum(nil))
@@ -98,12 +100,20 @@ func (a *App) isAdmin(r *http.Request) bool {
 	if err != nil {
 		return false
 	}
-	payload, sig, ok := strings.Cut(c.Value, ".")
+	i := strings.LastIndexByte(c.Value, '.')
+	if i < 0 {
+		return false
+	}
+	payload, sig := c.Value[:i], c.Value[i+1:]
+	expStr, epochStr, ok := strings.Cut(payload, ".")
 	if !ok {
 		return false
 	}
-	exp, err := strconv.ParseInt(payload, 10, 64)
-	if err != nil || time.Now().Unix() >= exp {
+	exp, err := strconv.ParseInt(expStr, 10, 64)
+	if err != nil || a.now().Unix() >= exp {
+		return false
+	}
+	if epoch, err := strconv.ParseInt(epochStr, 10, 64); err != nil || epoch != a.epoch() {
 		return false
 	}
 	want, err := b64.DecodeString(sig)

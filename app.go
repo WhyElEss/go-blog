@@ -36,6 +36,13 @@ type App struct {
 	// a post from being sent twice by the editor and the timer at once.
 	bsky   *bluesky
 	sendMu sync.Mutex
+	// auth is DATA_DIR/auth.json: the account as changed on the Security
+	// page. pending is a 2FA secret shown for scanning, not yet confirmed.
+	authMu    sync.RWMutex
+	auth      authState
+	authPath  string
+	pending   string
+	pendingAt time.Time
 }
 
 func newApp(cfg Config) (*App, error) {
@@ -52,6 +59,14 @@ func newApp(cfg Config) (*App, error) {
 		return nil, err
 	}
 	hash, _ := parseHash(cfg.AdminHash) // validated in loadConfig
+	if cfg.AdminUser == "" {
+		cfg.AdminUser = "admin"
+	}
+	authPath := filepath.Join(cfg.DataDir, "auth.json")
+	auth, err := loadAuth(authPath)
+	if err != nil {
+		return nil, err
+	}
 	tpl, err := loadTemplates()
 	if err != nil {
 		return nil, err
@@ -67,6 +82,8 @@ func newApp(cfg Config) (*App, error) {
 		loginLimit: newLimiter(5, 15*time.Minute),
 		now:        time.Now,
 		bsky:       newBluesky(cfg),
+		auth:       auth,
+		authPath:   authPath,
 	}, nil
 }
 
@@ -111,6 +128,12 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("POST /admin/upload", a.requireAdmin(a.handleUpload))
 	mux.HandleFunc("GET /admin/images", a.requireAdmin(a.handleImages))
 	mux.HandleFunc("POST /admin/images/delete", a.requireAdmin(a.handleImageDelete))
+	mux.HandleFunc("GET /admin/security", a.requireAdmin(a.handleSecurity))
+	mux.HandleFunc("POST /admin/security/account", a.requireAdmin(a.handleAccount))
+	mux.HandleFunc("POST /admin/security/totp/start", a.requireAdmin(a.handleTOTPStart))
+	mux.HandleFunc("POST /admin/security/totp/enable", a.requireAdmin(a.handleTOTPEnable))
+	mux.HandleFunc("POST /admin/security/totp/disable", a.requireAdmin(a.handleTOTPDisable))
+	mux.HandleFunc("POST /admin/security/signout", a.requireAdmin(a.handleSignOutOthers))
 	mux.HandleFunc("GET /admin/settings", a.requireAdmin(a.handleSettingsForm))
 	mux.HandleFunc("POST /admin/settings", a.requireAdmin(a.handleSettings))
 
@@ -256,7 +279,7 @@ var templateFuncs = template.FuncMap{
 func loadTemplates() (map[string]*template.Template, error) {
 	m := map[string]*template.Template{}
 	public := []string{"index", "post", "message"}
-	admin := []string{"login", "posts", "edit", "images", "settings"}
+	admin := []string{"login", "posts", "edit", "images", "settings", "security"}
 	for _, p := range public {
 		t, err := template.New(p).Funcs(templateFuncs).ParseFS(assets, "templates/layout.html", "templates/"+p+".html")
 		if err != nil {

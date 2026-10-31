@@ -32,6 +32,9 @@ renders a page in a few milliseconds.
   separate logo for dark mode.
 - **Admin panel** in English or Russian: posts, image library with usage
   counts, settings (title, description, menus, logo, icon).
+- **Sign-in** with a user name, a password and, optionally, a code from an
+  authenticator app (TOTP, RFC 6238). Each code works once; changing any of
+  it signs every other browser out.
 - **Ghost migration**: a converter for Ghost's JSON export and an importer
   that runs the images through the same pipeline. Old `/content/images/…`
   URLs redirect to the new copies.
@@ -109,7 +112,8 @@ To update: `docker compose build --no-cache && docker compose up -d`.
 
 | Variable | Meaning |
 |---|---|
-| `ADMIN_PASSWORD_HASH` | Required. Made by `blog hashpw`. |
+| `ADMIN_PASSWORD_HASH` | Required: the first password. Made by `blog hashpw`. |
+| `ADMIN_USER` | The first user name, `admin` by default. |
 | `BASE_URL` | Public origin, e.g. `https://blog.example.com`: absolute links in RSS and link previews. |
 | `HOST_PORT` | Host port, 8096 by default. |
 | `TZ` | Time zone for publication dates, e.g. `America/Toronto`. |
@@ -117,6 +121,20 @@ To update: `docker compose build --no-cache && docker compose up -d`.
 | `BLUESKY_HANDLE` | Optional. The Bluesky account that announces new posts. |
 | `BLUESKY_APP_PASSWORD` | Its app password (Settings → App passwords in Bluesky), never the account password. |
 | `BLUESKY_SERVICE` | The account's server, `https://bsky.social` by default. |
+
+### Signing in
+
+`ADMIN_USER` and `ADMIN_PASSWORD_HASH` are the first account. The admin's
+Security page then changes the user name and password and turns on
+two-factor sign-in; that is kept in `auth.json` in the data volume and wins
+over `.env`. Locked out, for instance with the phone lost:
+
+```bash
+docker exec blog rm /data/auth.json /data/session.key && docker restart blog
+```
+
+brings back the `.env` account without the second factor and signs every
+browser out.
 
 ## Moving from Ghost
 

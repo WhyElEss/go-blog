@@ -17,6 +17,7 @@
     <a href="/admin/"{{if eq .Path "/admin/"}} class="on"{{end}}>{{t .Lang "posts"}}</a>
     <a href="/admin/images"{{if eq .Path "/admin/images"}} class="on"{{end}}>{{t .Lang "images"}}</a>
     <a href="/admin/settings"{{if eq .Path "/admin/settings"}} class="on"{{end}}>{{t .Lang "settings"}}</a>
+    <a href="/admin/security"{{if eq .Path "/admin/security"}} class="on"{{end}}>{{t .Lang "security"}}</a>
     <a href="/" target="_blank">{{t .Lang "view_site"}} ↗</a>
   </nav>
   {{else}}<span class="a-brand">{{.SiteTitle}}</span>{{end}}

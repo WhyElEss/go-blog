@@ -11,6 +11,8 @@ type Config struct {
 	Listen    string
 	DataDir   string
 	AdminHash string
+	// AdminUser is the first user name; the Security page can change it.
+	AdminUser string
 	// BaseURL is the public origin (https://blog.example.com). RSS uses it
 	// for absolute links, and form posts may come from it.
 	BaseURL string
@@ -33,6 +35,7 @@ func loadConfig() (Config, error) {
 		Listen:     env("LISTEN_ADDR", ":8080"),
 		DataDir:    env("DATA_DIR", "./data"),
 		AdminHash:  env("ADMIN_PASSWORD_HASH", ""),
+		AdminUser:  env("ADMIN_USER", "admin"),
 		BaseURL:    strings.TrimRight(env("BASE_URL", ""), "/"),
 		TrustProxy: env("TRUST_PROXY_HEADERS", "true") != "false",
 

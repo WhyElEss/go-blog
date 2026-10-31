@@ -1,0 +1,50 @@
+{{define "content"}}
+<h1>{{t .Lang "security"}}</h1>
+<div class="settings">
+
+<form class="panel" method="post" action="/admin/security/account">
+  <h2>{{t .Lang "sec_account"}}</h2>
+  {{if .FromEnv}}<p class="hint">{{t .Lang "sec_from_env"}}</p>{{end}}
+  <label>{{t .Lang "user"}}<input name="user" value="{{.User}}" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+  <label>{{t .Lang "sec_new"}}<input type="password" name="new" autocomplete="new-password" minlength="12"><small>{{t .Lang "sec_new_hint"}}</small></label>
+  <label>{{t .Lang "sec_new2"}}<input type="password" name="new2" autocomplete="new-password"></label>
+  <p class="hint">{{t .Lang "sec_confirm"}}</p>
+  <label>{{t .Lang "sec_current"}}<input type="password" name="current" autocomplete="current-password" required></label>
+  {{if .TOTPOn}}<label>{{t .Lang "code"}}<input name="code" inputmode="numeric" maxlength="7" autocomplete="one-time-code" required></label>{{end}}
+  <button class="btn primary">{{t .Lang "sec_save"}}</button>
+</form>
+
+<section class="panel" id="totp">
+  <h2>{{t .Lang "sec_totp"}}</h2>
+  {{if .TOTPOn}}
+  <p>✅ {{t .Lang "sec_totp_is_on"}}</p>
+  <form method="post" action="/admin/security/totp/disable" class="inline-form">
+    <label>{{t .Lang "sec_current"}}<input type="password" name="current" autocomplete="current-password" required></label>
+    <label>{{t .Lang "code"}}<input name="code" inputmode="numeric" maxlength="7" autocomplete="one-time-code" required></label>
+    <button class="btn danger">{{t .Lang "sec_totp_off_btn"}}</button>
+  </form>
+  {{else if .Pending}}
+  <p>{{t .Lang "sec_totp_scan"}}</p>
+  <div class="qr" data-qr="{{.PendingQR}}"></div>
+  <p class="hint">{{t .Lang "sec_totp_key"}}: <code class="secret">{{.Pending}}</code></p>
+  <form method="post" action="/admin/security/totp/enable" class="inline-form">
+    <label>{{t .Lang "code"}}<input name="code" inputmode="numeric" maxlength="7" autocomplete="one-time-code" required autofocus></label>
+    <button class="btn primary">{{t .Lang "sec_totp_enable"}}</button>
+  </form>
+  {{else}}
+  <p>{{t .Lang "sec_totp_is_off"}}</p>
+  <form method="post" action="/admin/security/totp/start"><button class="btn primary">{{t .Lang "sec_totp_start"}}</button></form>
+  {{end}}
+  <p class="hint">{{t .Lang "sec_recover"}}</p>
+</section>
+
+<form class="panel" method="post" action="/admin/security/signout">
+  <h2>{{t .Lang "sec_others"}}</h2>
+  <p class="hint">{{t .Lang "sec_others_hint"}}</p>
+  <button class="btn">{{t .Lang "sec_others_btn"}}</button>
+</form>
+
+</div>
+<script src="/static/qrcode.js?v={{.Version}}" defer></script>
+<script src="/static/qr.js?v={{.Version}}" defer></script>
+{{end}}
