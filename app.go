@@ -113,6 +113,9 @@ func (a *App) routes() http.Handler {
 	// and /img/, so the catch-all route dispatches.
 	mux.HandleFunc("GET /", a.handleSlugPath)
 
+	if a.cfg.NoAdmin {
+		return a.secure(mux)
+	}
 	mux.HandleFunc("GET /admin", redirectTo("/admin/"))
 	mux.HandleFunc("GET /admin/login", a.handleLoginForm)
 	mux.HandleFunc("POST /admin/login", a.handleLogin)

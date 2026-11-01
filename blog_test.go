@@ -898,3 +898,33 @@ func TestSecurity(t *testing.T) {
 	}
 	form("/admin/security/totp/disable", url.Values{"current": {"a much longer one"}, "code": {code}}, laptop)
 }
+
+func TestAdminOff(t *testing.T) {
+	t.Setenv("ADMIN_UI", "off")
+	t.Setenv("ADMIN_PASSWORD_HASH", "")
+	cfg, err := loadConfig()
+	if err != nil {
+		t.Fatalf("a standby needs no password: %v", err)
+	}
+	cfg.DataDir = t.TempDir()
+	a, err := newApp(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec := do(t, a, httptest.NewRequest("GET", "/", nil)); rec.Code != http.StatusOK {
+		t.Fatalf("home page: %d", rec.Code)
+	}
+	for _, path := range []string{"/admin/", "/admin/login", "/admin/settings"} {
+		req := httptest.NewRequest("GET", path, nil)
+		req.AddCookie(adminCookieFor(a))
+		if rec := do(t, a, req); rec.Code != http.StatusNotFound {
+			t.Errorf("GET %s: %d, want 404", path, rec.Code)
+		}
+	}
+	form := url.Values{"user": {"admin"}, "password": {"x"}}
+	req := httptest.NewRequest("POST", "/admin/login", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if rec := do(t, a, req); rec.Code == http.StatusOK || rec.Code == http.StatusSeeOther {
+		t.Errorf("POST /admin/login answered %d", rec.Code)
+	}
+}

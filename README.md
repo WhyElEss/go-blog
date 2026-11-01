@@ -114,6 +114,7 @@ To update: `docker compose build --no-cache && docker compose up -d`.
 |---|---|
 | `ADMIN_PASSWORD_HASH` | Required: the first password. Made by `blog hashpw`. |
 | `ADMIN_USER` | The first user name, `admin` by default. |
+| `ADMIN_UI` | `off` leaves out `/admin/` (404) and the password, for a standby copy of another install. |
 | `BASE_URL` | Public origin, e.g. `https://blog.example.com`: absolute links in RSS and link previews. |
 | `HOST_PORT` | Host port, 8096 by default. |
 | `TZ` | Time zone for publication dates, e.g. `America/Toronto`. |

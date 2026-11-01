@@ -21,6 +21,9 @@ type Config struct {
 	// Bluesky account that announces new posts; both empty turns it off.
 	BlueskyHandle, BlueskyPassword string
 	BlueskyService                 string // the account's server, https://bsky.social
+	// NoAdmin leaves out /admin/ altogether (ADMIN_UI=off), for a standby
+	// that only mirrors another install's data volume.
+	NoAdmin bool
 }
 
 func env(key, def string) string {
@@ -42,6 +45,11 @@ func loadConfig() (Config, error) {
 		BlueskyHandle:   strings.TrimPrefix(env("BLUESKY_HANDLE", ""), "@"),
 		BlueskyPassword: env("BLUESKY_APP_PASSWORD", ""),
 		BlueskyService:  env("BLUESKY_SERVICE", "https://bsky.social"),
+
+		NoAdmin: env("ADMIN_UI", "on") == "off",
+	}
+	if c.NoAdmin {
+		return c, nil
 	}
 	if c.AdminHash == "" {
 		return c, errors.New("ADMIN_PASSWORD_HASH is not set; generate it with: blog hashpw")
