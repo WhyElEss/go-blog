@@ -980,6 +980,11 @@ func TestFollowBox(t *testing.T) {
 	if b := get("/about/", "en"); strings.Contains(b, `class="follow"`) {
 		t.Error("box shown on a page")
 	}
+	// The footer links the Mastodon profile with rel="me" on every page,
+	// the home page included: that is the page a profile field points at.
+	if b := get("/", "en"); !strings.Contains(b, `<a href="https://mastodon.social/@me" rel="me">Mastodon</a>`) {
+		t.Error("footer lacks the rel=me link")
+	}
 
 	// Three profiles: a comma, then "and".
 	got := socialLinks(Settings{Bluesky: "b", Mastodon: "m", X: "x"}, "en")

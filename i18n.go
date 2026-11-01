@@ -150,7 +150,7 @@ var messages = map[string][2]string{
 	"logo_dark":        {"Логотип для тёмной темы", "Logo for dark mode"},
 	"icon":             {"Иконка сайта (квадратная)", "Site icon (square)"},
 	"profiles":         {"Профили для обсуждения", "Profiles for comments"},
-	"profiles_hint":    {"Ссылки под каждой записью, вместе с RSS. Пустое поле не показывается; нет ни одного — нет и блока.", "Linked under every post, together with RSS. Empty fields are left out; with none, there is no box."},
+	"profiles_hint":    {"Ссылки под каждой записью, вместе с RSS; Mastodon ещё и в подвале, с rel=\"me\" для подтверждения в профиле. Пустое поле не показывается; нет ни одного — нет и блока.", "Linked under every post, together with RSS; Mastodon also in the footer, with rel=\"me\" for verification on the profile. Empty fields are left out; with none, there is no box."},
 	"per_page":         {"Записей на странице", "Posts per page"},
 	"words":            {"слов", "words"},
 	"bsky_send":        {"Отправить ссылку в Bluesky (оттуда Crossposter перешлёт её в X и Mastodon)", "Post the link to Bluesky (Crossposter forwards it to X and Mastodon)"},

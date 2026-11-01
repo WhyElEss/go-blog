@@ -21,15 +21,18 @@ type pageBase struct {
 	LogoDark    string
 	Nav         []Link
 	FooterNav   []Link
-	Path        string
-	Origin      string
-	FeedURL     string // the feed in SiteLang
-	OGTitle     string
-	OGImage     string // absolute URL
-	OGType      string
-	Admin       bool
-	Version     string
-	Year        int
+	// Mastodon is the profile linked in the footer with rel="me", which
+	// lets Mastodon show the blog as verified on that profile.
+	Mastodon string
+	Path     string
+	Origin   string
+	FeedURL  string // the feed in SiteLang
+	OGTitle  string
+	OGImage  string // absolute URL
+	OGType   string
+	Admin    bool
+	Version  string
+	Year     int
 }
 
 func (a *App) pageBase(r *http.Request, title string) pageBase {
@@ -38,7 +41,7 @@ func (a *App) pageBase(r *http.Request, title string) pageBase {
 	lang := readerLang(r, s.Lang)
 	b := pageBase{
 		Lang: lang, SiteLang: lang, SiteTitle: s.Title, Description: pickText(lang, s.Lang, s.Description, s.DescriptionAlt),
-		Logo: s.Logo, LogoDark: s.LogoDark, Nav: localLinks(s.Nav, lang, s.Lang), FooterNav: localLinks(s.FooterNav, lang, s.Lang),
+		Logo: s.Logo, LogoDark: s.LogoDark, Nav: localLinks(s.Nav, lang, s.Lang), FooterNav: localLinks(s.FooterNav, lang, s.Lang), Mastodon: s.Mastodon,
 		Path: r.URL.Path, Origin: a.origin(r), FeedURL: "/rss/", OGType: "website", Admin: a.isAdmin(r), Version: version, Year: a.now().Year(),
 	}
 	if lang != normLang(s.Lang) {

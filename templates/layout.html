@@ -44,7 +44,7 @@
 <footer class="site-foot">
   <div class="wrap foot-row">
     <span>© {{.Year}} {{.SiteTitle}}</span>
-    <nav class="nav">{{range .FooterNav}}<a href="{{.URL}}">{{.Label}}</a>{{end}}<a href="{{.FeedURL}}">{{t .SiteLang "rss"}}</a>{{if .Admin}}<a href="/admin/">{{t .SiteLang "admin"}}</a>{{end}}</nav>
+    <nav class="nav">{{range .FooterNav}}<a href="{{.URL}}">{{.Label}}</a>{{end}}{{with .Mastodon}}<a href="{{.}}" rel="me">Mastodon</a>{{end}}<a href="{{.FeedURL}}">{{t .SiteLang "rss"}}</a>{{if .Admin}}<a href="/admin/">{{t .SiteLang "admin"}}</a>{{end}}</nav>
   </div>
 </footer>
 <button type="button" class="to-top" aria-label="{{t .SiteLang "to_top"}}" title="{{t .SiteLang "to_top"}}" hidden>↑</button>
