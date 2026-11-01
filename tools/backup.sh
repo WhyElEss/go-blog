@@ -36,8 +36,11 @@ NAME="blog_backup_$(date +%Y-%m-%d_%H-%M-%S).tar.gz"
 TMP="$BACKUP_DIR/.$NAME.part"
 trap 'rm -f "$TMP"' EXIT
 
-# The image runs as uid 1000, the owner of the volume's files.
-$DOCKER run --rm --network none --entrypoint tar \
+# The image runs as uid 1000, the owner of the volume's files. Run from
+# root's crontab, .env is root's too, so tar reads as root.
+AS_ROOT=()
+[ "$(id -u)" -eq 0 ] && AS_ROOT=(--user 0)
+$DOCKER run --rm --network none "${AS_ROOT[@]}" --entrypoint tar \
   -v "$VOLUME:/backup/data:ro" \
   -v "$BLOG_DIR/docker-compose.yml:/backup/project/docker-compose.yml:ro" \
   -v "$BLOG_DIR/.env:/backup/project/.env:ro" \

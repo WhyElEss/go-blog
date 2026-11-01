@@ -142,6 +142,19 @@ docker run --rm --user 0 -v blog_data:/data -v ~/blog-backups:/b:ro \
 docker compose up -d
 ```
 
+### A standby copy
+
+A second install can serve the same blog from another machine, ready to take
+over. Give it `ADMIN_UI=off` and no `BLUESKY_*`: an admin panel there would
+edit a copy that the next refresh overwrites, and two senders would announce
+every post twice. Keep its data volume an exact copy of the primary's, for
+instance by streaming `tar -czf - -C /data .` from a container on the
+primary and unpacking it into the standby's volume with the blog stopped;
+both are safe to read while the primary runs, as for backups. Switching is
+then a matter of where the hostname points. On the day it takes over for
+good, set `ADMIN_UI` back and add the Bluesky lines: the user name, password
+and 2FA came over in `auth.json`.
+
 ### Signing in
 
 `ADMIN_USER` and `ADMIN_PASSWORD_HASH` are the first account. The admin's
