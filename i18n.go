@@ -33,6 +33,9 @@ var messages = map[string][2]string{
 	"more_posts": {"Другие записи", "More posts"},
 	"nav_older":  {"← Раньше", "← Older"},
 	"nav_newer":  {"Позже →", "Newer →"},
+	"discuss":    {"Обсудить запись можно в", "Comments are welcome on"},
+	"and":        {"и", "and"},
+	"subscribe":  {"Подписаться на блог:", "Follow the blog:"},
 
 	// admin
 	"admin":            {"Админка", "Admin"},
@@ -146,6 +149,8 @@ var messages = map[string][2]string{
 	"logo":             {"Логотип", "Logo"},
 	"logo_dark":        {"Логотип для тёмной темы", "Logo for dark mode"},
 	"icon":             {"Иконка сайта (квадратная)", "Site icon (square)"},
+	"profiles":         {"Профили для обсуждения", "Profiles for comments"},
+	"profiles_hint":    {"Ссылки под каждой записью, вместе с RSS. Пустое поле не показывается; нет ни одного — нет и блока.", "Linked under every post, together with RSS. Empty fields are left out; with none, there is no box."},
 	"per_page":         {"Записей на странице", "Posts per page"},
 	"words":            {"слов", "words"},
 	"bsky_send":        {"Отправить ссылку в Bluesky (оттуда Crossposter перешлёт её в X и Mastodon)", "Post the link to Bluesky (Crossposter forwards it to X and Mastodon)"},

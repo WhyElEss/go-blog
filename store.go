@@ -113,12 +113,16 @@ type Settings struct {
 	DescriptionAlt string `json:"description_alt,omitempty"`
 	// Lang is the default language: for readers whose browser asks for
 	// neither Russian nor English, and for the feed at /rss/.
-	Lang         string `json:"lang"`
-	Nav          []Link `json:"nav,omitempty"`
-	FooterNav    []Link `json:"footer_nav,omitempty"`
-	Logo         string `json:"logo,omitempty"`      // image URL; empty shows the title
-	LogoDark     string `json:"logo_dark,omitempty"` // logo for dark mode; empty uses Logo
-	Icon         string `json:"icon,omitempty"`      // square image URL for the favicon
+	Lang      string `json:"lang"`
+	Nav       []Link `json:"nav,omitempty"`
+	FooterNav []Link `json:"footer_nav,omitempty"`
+	Logo      string `json:"logo,omitempty"`      // image URL; empty shows the title
+	LogoDark  string `json:"logo_dark,omitempty"` // logo for dark mode; empty uses Logo
+	Icon      string `json:"icon,omitempty"`      // square image URL for the favicon
+	// Profiles linked under every post for comments; empty ones are left out.
+	Bluesky      string `json:"bluesky,omitempty"`
+	Mastodon     string `json:"mastodon,omitempty"`
+	X            string `json:"x,omitempty"`
 	PostsPerPage int    `json:"posts_per_page"`
 }
 

@@ -928,3 +928,62 @@ func TestAdminOff(t *testing.T) {
 		t.Errorf("POST /admin/login answered %d", rec.Code)
 	}
 }
+
+func TestFollowBox(t *testing.T) {
+	a := testApp(t)
+	a.store.update(func(d *Data) error {
+		d.Posts = append(d.Posts,
+			&Post{ID: "1", Slug: "post", Title: "Post", Body: "x", Lang: "en", PublishedAt: time.Now().Add(-time.Hour)},
+			&Post{ID: "2", Slug: "about", Title: "About", Body: "x", Lang: "en", Page: true, PublishedAt: time.Now().Add(-time.Hour)},
+		)
+		return nil
+	})
+	get := func(path, accept string) string {
+		req := httptest.NewRequest("GET", path, nil)
+		req.Header.Set("Accept-Language", accept)
+		return do(t, a, req).Body.String()
+	}
+	if b := get("/post/", "en"); strings.Contains(b, `class="follow"`) {
+		t.Error("box shown with no profiles set")
+	}
+
+	form := url.Values{"title": {"Blog"}, "lang": {"en"}, "posts_per_page": {"10"},
+		"bluesky": {" https://bsky.app/profile/me.example "}, "mastodon": {"https://mastodon.social/@me"}, "x": {"javascript:alert(1)"}}
+	req := httptest.NewRequest("POST", "/admin/settings", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(adminCookieFor(a))
+	if rec := do(t, a, req); rec.Code != http.StatusSeeOther {
+		t.Fatalf("settings: %d", rec.Code)
+	}
+	var s Settings
+	a.store.view(func(d *Data) { s = d.Settings })
+	if s.Bluesky != "https://bsky.app/profile/me.example" || s.Mastodon != "https://mastodon.social/@me" || s.X != "" {
+		t.Fatalf("stored %q %q %q", s.Bluesky, s.Mastodon, s.X)
+	}
+
+	b := get("/post/", "en")
+	for _, want := range []string{
+		`Comments are welcome on <a href="https://bsky.app/profile/me.example"><svg class="icon"`,
+		`</svg>Bluesky</a> and <a href="https://mastodon.social/@me" rel="me"><svg class="icon"`,
+		`Follow the blog: <a href="/rss/"><svg class="icon"`,
+	} {
+		if !strings.Contains(b, want) {
+			t.Errorf("en box lacks %q", want)
+		}
+	}
+	if strings.Contains(b, "javascript:") {
+		t.Error("a non-http profile got through")
+	}
+	if b := get("/post/", "ru"); !strings.Contains(b, `</svg>Bluesky</a> и <a`) || !strings.Contains(b, `Подписаться на блог: <a href="/rss/ru/">`) {
+		t.Error("ru box wrong")
+	}
+	if b := get("/about/", "en"); strings.Contains(b, `class="follow"`) {
+		t.Error("box shown on a page")
+	}
+
+	// Three profiles: a comma, then "and".
+	got := socialLinks(Settings{Bluesky: "b", Mastodon: "m", X: "x"}, "en")
+	if len(got) != 3 || got[0].Sep != "" || got[1].Sep != ", " || got[2].Sep != " and " {
+		t.Errorf("separators %+v", got)
+	}
+}

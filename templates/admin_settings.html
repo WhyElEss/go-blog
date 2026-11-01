@@ -20,6 +20,13 @@
     <label>{{t .Lang "icon"}}<input name="icon" id="icon" value="{{.S.Icon}}" placeholder="/img/…"></label>
     <button type="button" class="btn" data-field-upload="icon">{{t .Lang "upload"}}</button>
   </div>
+  <fieldset class="profiles">
+    <legend>{{t .Lang "profiles"}}</legend>
+    <label>Bluesky<input type="url" name="bluesky" value="{{.S.Bluesky}}" placeholder="https://bsky.app/profile/…"></label>
+    <label>Mastodon<input type="url" name="mastodon" value="{{.S.Mastodon}}" placeholder="https://mastodon.social/@…"></label>
+    <label>X<input type="url" name="x" value="{{.S.X}}" placeholder="https://x.com/…"></label>
+    <small>{{t .Lang "profiles_hint"}}</small>
+  </fieldset>
   <span class="status" id="upload-status" data-uploading="{{t .Lang "uploading"}}" data-failed="{{t .Lang "upload_failed"}}"></span>
   <input type="file" id="img-file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" hidden>
   <button class="btn primary">{{t .Lang "save"}}</button>

@@ -620,6 +620,9 @@ func (a *App) handleSettings(w http.ResponseWriter, r *http.Request) {
 		Logo:           strings.TrimSpace(r.FormValue("logo")),
 		LogoDark:       strings.TrimSpace(r.FormValue("logo_dark")),
 		Icon:           strings.TrimSpace(r.FormValue("icon")),
+		Bluesky:        profileURL(r.FormValue("bluesky")),
+		Mastodon:       profileURL(r.FormValue("mastodon")),
+		X:              profileURL(r.FormValue("x")),
 		PostsPerPage:   per,
 	}
 	if s.Title == "" {

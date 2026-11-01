@@ -219,6 +219,8 @@ type postPage struct {
 	Older, Newer *card
 	// EditURL is set for the signed-in admin.
 	EditURL string
+	// Social lists the profiles for the box under a post.
+	Social []socialLink
 }
 
 // handleSlugPath serves /{slug}/ and sends /{slug} there.
@@ -302,6 +304,9 @@ func (a *App) handlePost(w http.ResponseWriter, r *http.Request, slug string) {
 	}
 	if admin {
 		data.EditURL = "/admin/posts/" + p.ID
+	}
+	if !p.Page {
+		a.store.view(func(d *Data) { data.Social = socialLinks(d.Settings, lang) })
 	}
 	a.render(w, http.StatusOK, "post", data)
 }

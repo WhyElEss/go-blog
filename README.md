@@ -21,6 +21,9 @@ renders a page in a few milliseconds.
 - **Bluesky**: a box in the editor posts a link card for the post (cover,
   title, excerpt) once it is published, scheduled posts included. Signs in
   with an app password; a post is never sent twice.
+- **Comments elsewhere**: under every post, links to the author's Bluesky,
+  Mastodon and X profiles (set in the settings; empty ones left out) and to
+  the RSS feed, with the real brand marks from Simple Icons, inline.
 - **Posts and pages**: drafts, scheduled publication, tags with their own
   pages, standalone pages (About, Contact) outside the feed.
 - **Two languages, one URL**: a post can have both an English and a Russian

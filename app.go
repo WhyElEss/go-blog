@@ -262,7 +262,8 @@ func (a *App) handleFavicon(w http.ResponseWriter, r *http.Request) {
 }
 
 var templateFuncs = template.FuncMap{
-	"t": t,
+	"t":       t,
+	"rssIcon": func() template.HTML { return iconRSS },
 	// tile hands a card to the "tile" template with the cover's sizes
 	// attribute, which depends on how wide the tiles are where it is used.
 	"tile": func(c card, sizes string) any {
