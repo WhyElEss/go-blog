@@ -71,13 +71,17 @@ func newApp(cfg Config) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	var host string
+	if u, err := url.Parse(cfg.BaseURL); err == nil {
+		host = u.Hostname()
+	}
 	return &App{
 		cfg:        cfg,
 		store:      store,
 		adminHash:  hash,
 		sessionKey: key,
 		imagesDir:  imagesDir,
-		md:         newMarkdown(store.image),
+		md:         newMarkdown(store.image, host),
 		tpl:        tpl,
 		loginLimit: newLimiter(5, 15*time.Minute),
 		now:        time.Now,
@@ -266,6 +270,14 @@ func (a *App) handleFavicon(w http.ResponseWriter, r *http.Request) {
 var templateFuncs = template.FuncMap{
 	"t":       t,
 	"rssIcon": func() template.HTML { return iconRSS },
+	// newTab opens a link to another site in a new tab. Menu links to the
+	// blog itself are written as paths, so any full web address is outside.
+	"newTab": func(u string) template.HTMLAttr {
+		if externalURL(u, "") {
+			return ` target="_blank" rel="noopener"`
+		}
+		return ""
+	},
 	// tile hands a card to the "tile" template with the cover's sizes
 	// attribute, which depends on how wide the tiles are where it is used.
 	"tile": func(c card, sizes string) any {

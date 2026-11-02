@@ -33,7 +33,7 @@
   <div class="wrap head-row">
     <a class="brand" href="/">{{if .Logo}}<picture>{{with .LogoDark}}<source srcset="{{.}}" media="(prefers-color-scheme: dark)">{{end}}<img class="logo" src="{{.Logo}}" alt="{{.SiteTitle}}"></picture>{{else}}{{.SiteTitle}}{{end}}</a>
     <div class="head-right">
-      {{if .Nav}}<nav class="nav">{{range .Nav}}<a href="{{.URL}}">{{.Label}}</a>{{end}}</nav>{{end}}
+      {{if .Nav}}<nav class="nav">{{range .Nav}}<a href="{{.URL}}"{{newTab .URL}}>{{.Label}}</a>{{end}}</nav>{{end}}
       <span class="langs"><a href="/lang/ru?next={{.Path}}" hreflang="ru" lang="ru"{{if eq .SiteLang "ru"}} class="on" aria-current="true"{{end}}>RU</a><a href="/lang/en?next={{.Path}}" hreflang="en" lang="en"{{if eq .SiteLang "en"}} class="on" aria-current="true"{{end}}>EN</a></span>
     </div>
   </div>
@@ -44,7 +44,7 @@
 <footer class="site-foot">
   <div class="wrap foot-row">
     <span>© {{.Year}} {{.SiteTitle}}</span>
-    <nav class="nav">{{range .FooterNav}}<a href="{{.URL}}">{{.Label}}</a>{{end}}{{with .Mastodon}}<a href="{{.}}" rel="me">Mastodon</a>{{end}}<a href="{{.FeedURL}}">{{t .SiteLang "rss"}}</a>{{if .Admin}}<a href="/admin/">{{t .SiteLang "admin"}}</a>{{end}}</nav>
+    <nav class="nav">{{range .FooterNav}}<a href="{{.URL}}"{{newTab .URL}}>{{.Label}}</a>{{end}}{{with .Mastodon}}<a href="{{.}}" rel="me" target="_blank">Mastodon</a>{{end}}<a href="{{.FeedURL}}">{{t .SiteLang "rss"}}</a>{{if .Admin}}<a href="/admin/">{{t .SiteLang "admin"}}</a>{{end}}</nav>
   </div>
 </footer>
 <button type="button" class="to-top" aria-label="{{t .SiteLang "to_top"}}" title="{{t .SiteLang "to_top"}}" hidden>↑</button>

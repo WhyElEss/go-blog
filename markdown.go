@@ -275,13 +275,52 @@ type markdown struct {
 	md goldmark.Markdown
 }
 
-func newMarkdown(lookup func(key string) (Image, bool)) *markdown {
+// externalURL reports whether u is a web address on another site than
+// host. Relative links, anchors and mail links stay on the blog.
+func externalURL(u, host string) bool {
+	pu, err := url.Parse(u)
+	if err != nil || (pu.Scheme != "http" && pu.Scheme != "https") || pu.Host == "" {
+		return false
+	}
+	return host == "" || !strings.EqualFold(pu.Hostname(), host)
+}
+
+// linkTargets opens links to other sites in a new tab, so following one
+// does not take the reader away from the post.
+type linkTargets struct{ host string }
+
+func (t linkTargets) Transform(doc *ast.Document, reader text.Reader, pc parser.Context) {
+	src := reader.Source()
+	ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		var dest string
+		switch v := n.(type) {
+		case *ast.Link:
+			dest = string(v.Destination)
+		case *ast.AutoLink:
+			if v.AutoLinkType == ast.AutoLinkURL {
+				dest = string(v.URL(src))
+			}
+		}
+		if dest != "" && externalURL(dest, t.host) {
+			n.SetAttributeString("target", []byte("_blank"))
+			n.SetAttributeString("rel", []byte("noopener"))
+		}
+		return ast.WalkContinue, nil
+	})
+}
+
+// newMarkdown makes the renderer; host is the blog's own, whose absolute
+// links stay in the tab.
+func newMarkdown(lookup func(key string) (Image, bool), host string) *markdown {
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.GFM, extension.Footnote, dialectExtras{}),
 		goldmark.WithParserOptions(
 			parser.WithAttribute(),
 			parser.WithAutoHeadingID(),
-			parser.WithASTTransformers(util.Prioritized(blockTransformer{}, 100)),
+			parser.WithASTTransformers(util.Prioritized(blockTransformer{}, 100), util.Prioritized(linkTargets{host: host}, 300)),
 		),
 		goldmark.WithRendererOptions(
 			gmhtml.WithUnsafe(),

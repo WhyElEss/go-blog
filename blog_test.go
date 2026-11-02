@@ -67,7 +67,7 @@ func TestMarkdownFigures(t *testing.T) {
 			return Image{Key: key, Width: 2000, Height: 1000, Widths: []int{600, 1000, 1400, 2000}}, true
 		}
 		return Image{}, false
-	})
+	}, "")
 	h, err := md.render("![Turntable](/img/2026/10/a.jpg#right \"A caption\")\n\nText beside it.\n")
 	if err != nil {
 		t.Fatal(err)
@@ -106,7 +106,7 @@ func TestMarkdownFigures(t *testing.T) {
 }
 
 func TestMarkdownEmbedsAndHeadings(t *testing.T) {
-	md := newMarkdown(nil)
+	md := newMarkdown(nil, "blog.example.com")
 	h, _ := md.render("https://www.youtube.com/watch?v=gYc5zrXC52k\n\n[a link](https://youtu.be/gYc5zrXC52k)\n")
 	if !strings.Contains(h, `src="https://www.youtube-nocookie.com/embed/gYc5zrXC52k"`) {
 		t.Errorf("no embed:\n%s", h)
@@ -129,7 +129,7 @@ func TestMarkdownEmbedsAndHeadings(t *testing.T) {
 }
 
 func TestMarkdownExtras(t *testing.T) {
-	md := newMarkdown(nil)
+	md := newMarkdown(nil, "blog.example.com")
 	for in, want := range map[string]string{
 		"a ==bright== word":     "<p>a <mark>bright</mark> word</p>",
 		"x = 1 and y == 2":      "<p>x = 1 and y == 2</p>",
@@ -1024,8 +1024,8 @@ func TestFollowBox(t *testing.T) {
 
 	b := get("/post/", "en")
 	for _, want := range []string{
-		`Comments are welcome on <a href="https://bsky.app/profile/me.example"><svg class="icon"`,
-		`</svg>Bluesky</a> and <a href="https://mastodon.social/@me" rel="me"><svg class="icon"`,
+		`Comments are welcome on <a href="https://bsky.app/profile/me.example" rel="noopener" target="_blank"><svg class="icon"`,
+		`</svg>Bluesky</a> and <a href="https://mastodon.social/@me" rel="me noopener" target="_blank"><svg class="icon"`,
 		`Follow the blog: <a href="/rss/"><svg class="icon"`,
 	} {
 		if !strings.Contains(b, want) {
@@ -1043,7 +1043,7 @@ func TestFollowBox(t *testing.T) {
 	}
 	// The footer links the Mastodon profile with rel="me" on every page,
 	// the home page included: that is the page a profile field points at.
-	if b := get("/", "en"); !strings.Contains(b, `<a href="https://mastodon.social/@me" rel="me">Mastodon</a>`) {
+	if b := get("/", "en"); !strings.Contains(b, `<a href="https://mastodon.social/@me" rel="me" target="_blank">Mastodon</a>`) {
 		t.Error("footer lacks the rel=me link")
 	}
 
@@ -1106,5 +1106,36 @@ func TestTagAdmin(t *testing.T) {
 	req.AddCookie(adminCookieFor(a))
 	if b := do(t, a, req).Body.String(); !strings.Contains(b, `<a href="/tag/canada/" target="_blank">Canada</a>`) {
 		t.Error("settings page has no tag list")
+	}
+}
+
+func TestExternalLinksNewTab(t *testing.T) {
+	md := newMarkdown(nil, "blog.example.com")
+	h, err := md.render("[out](https://example.org/a) [home](https://blog.example.com/x/) [rel](/about/) [top](#a) <https://example.net> www.example.com [mail](mailto:me@example.org)\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`<a href="https://example.org/a" target="_blank" rel="noopener">out</a>`,
+		`<a href="https://blog.example.com/x/">home</a>`,
+		`<a href="/about/">rel</a>`,
+		`<a href="#a">top</a>`,
+		`<a href="https://example.net" target="_blank" rel="noopener">https://example.net</a>`,
+		`<a href="http://www.example.com" target="_blank" rel="noopener">www.example.com</a>`,
+		`<a href="mailto:me@example.org">mail</a>`,
+	} {
+		if !strings.Contains(h, want) {
+			t.Errorf("missing %s in\n%s", want, h)
+		}
+	}
+
+	a := testApp(t)
+	a.store.update(func(d *Data) error {
+		d.Settings.Nav = parseLinks("About | /about/\nShop | https://shop.example.org/")
+		return nil
+	})
+	b := do(t, a, httptest.NewRequest("GET", "/", nil)).Body.String()
+	if !strings.Contains(b, `<a href="/about/">About</a>`) || !strings.Contains(b, `<a href="https://shop.example.org/" target="_blank" rel="noopener">Shop</a>`) {
+		t.Error("menu links: new tab only for other sites")
 	}
 }

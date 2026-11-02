@@ -18,7 +18,7 @@
 <aside class="follow">
   <svg class="follow-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21 3.5 12.5a5 5 0 0 1 7.07-7.07L12 6.86l1.43-1.43a5 5 0 0 1 7.07 7.07z"/></svg>
   <div class="follow-text">
-    <p>{{t $.SiteLang "discuss"}} {{range .}}{{.Sep}}<a href="{{.URL}}"{{with .Rel}} rel="{{.}}"{{end}}>{{.Icon}}{{.Name}}</a>{{end}}.</p>
+    <p>{{t $.SiteLang "discuss"}} {{range .}}{{.Sep}}<a href="{{.URL}}" rel="{{with .Rel}}{{.}} {{end}}noopener" target="_blank">{{.Icon}}{{.Name}}</a>{{end}}.</p>
     <p>{{t $.SiteLang "subscribe"}} <a href="{{$.FeedURL}}">{{rssIcon}}RSS</a>.</p>
   </div>
 </aside>
