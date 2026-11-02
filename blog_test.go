@@ -1046,6 +1046,23 @@ func TestFollowBox(t *testing.T) {
 	if b := get("/", "en"); !strings.Contains(b, `<a href="https://mastodon.social/@me" rel="me" target="_blank">Mastodon</a>`) {
 		t.Error("footer lacks the rel=me link")
 	}
+	// The same profile credits the author on Mastodon's link previews.
+	if b := get("/post/", "en"); !strings.Contains(b, `<meta name="fediverse:creator" content="@me@mastodon.social">`) {
+		t.Error("head lacks fediverse:creator")
+	}
+	for in, want := range map[string]string{
+		"https://mastodon.social/@me":   "@me@mastodon.social",
+		"https://mastodon.social/@me/":  "@me@mastodon.social",
+		"https://mas.to/@a_b":           "@a_b@mas.to",
+		"https://mastodon.social/me":    "",
+		"https://mastodon.social/@":     "",
+		"https://mastodon.social/@me/1": "",
+		"":                              "",
+	} {
+		if got := fediverseHandle(in); got != want {
+			t.Errorf("fediverseHandle(%q) = %q, want %q", in, got, want)
+		}
+	}
 
 	// Three profiles: a comma, then "and".
 	got := socialLinks(Settings{Bluesky: "b", Mastodon: "m", X: "x"}, "en")

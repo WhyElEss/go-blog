@@ -57,3 +57,18 @@ func profileURL(s string) string {
 	}
 	return s
 }
+
+// fediverseHandle turns a profile address such as
+// https://mastodon.social/@me into @me@mastodon.social, the form the
+// fediverse:creator tag wants; anything else gives "".
+func fediverseHandle(profile string) string {
+	u, err := url.Parse(profile)
+	if err != nil || u.Host == "" {
+		return ""
+	}
+	user := strings.TrimSuffix(u.Path, "/")
+	if !strings.HasPrefix(user, "/@") || len(user) < 3 || strings.ContainsAny(user[2:], "/@") {
+		return ""
+	}
+	return user[1:] + "@" + u.Host
+}
