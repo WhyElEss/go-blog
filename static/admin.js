@@ -34,11 +34,13 @@
     status.classList.toggle("bad", !!bad);
   };
 
-  // upload sends one file and resolves to {url, width, height}.
-  async function upload(file) {
+  // upload sends one file and resolves to {url, width, height}. name, if
+  // given, names the stored file instead of the file's own name.
+  async function upload(file, name) {
     setStatus(status ? status.dataset.uploading + " " + file.name : "");
     const fd = new FormData();
     fd.append("file", file);
+    if (name) fd.append("name", name);
     let res, data;
     try {
       res = await fetch("/admin/upload", { method: "POST", body: fd, credentials: "same-origin" });
@@ -365,9 +367,17 @@
     if (cover.value) coverPreview.src = cover.value;
   };
   cover.addEventListener("input", showCover);
+  // The cover is named after the post's URL ("halloween-candies-cover"),
+  // or its title when the URL is still empty, as the server does.
+  const coverName = () => {
+    const slug = $('input[name="slug"]').value.trim();
+    const title = $('input[name="title_' + $('select[name="lang"]').value + '"]');
+    const base = slug || (title ? title.value.trim() : "");
+    return base ? base + "-cover" : "";
+  };
   $("[data-cover-upload]").addEventListener("click", async () => {
     const file = await pickFile();
-    const { url } = await upload(file);
+    const { url } = await upload(file, coverName());
     cover.value = url;
     dirty = true;
     showCover();

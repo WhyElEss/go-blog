@@ -1145,3 +1145,22 @@ func TestExternalLinksNewTab(t *testing.T) {
 		t.Error("menu links: new tab only for other sites")
 	}
 }
+
+func TestUploadNamedCover(t *testing.T) {
+	a := testApp(t)
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	mw.WriteField("name", "halloween-candies-cover")
+	fw, _ := mw.CreateFormFile("file", "IMG_1234.PNG")
+	fw.Write(encodeJPEG(t, 800, 600, 0))
+	mw.Close()
+	req := httptest.NewRequest("POST", "/admin/upload", &buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.AddCookie(adminCookieFor(a))
+	rec := do(t, a, req)
+	var res struct{ URL string }
+	json.Unmarshal(rec.Body.Bytes(), &res)
+	if rec.Code != 200 || !strings.HasSuffix(res.URL, "/halloween-candies-cover.jpg") {
+		t.Fatalf("upload: %d %s", rec.Code, rec.Body)
+	}
+}

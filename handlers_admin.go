@@ -442,7 +442,8 @@ func (a *App) handlePreview(w http.ResponseWriter, r *http.Request) {
 const maxUpload = 40 << 20
 
 // handleUpload stores one image (form field "file") and answers with its
-// URL and size as JSON.
+// URL and size as JSON. A "name" field, when given, names the file in
+// place of the uploaded file's name.
 func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxUpload+1<<20)
 	f, hdr, err := r.FormFile("file")
@@ -460,7 +461,11 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, http.StatusRequestEntityTooLarge, fmt.Sprintf("file larger than %d MB", maxUpload>>20))
 		return
 	}
-	im, err := a.addImage(hdr.Filename, data, a.now())
+	name := hdr.Filename
+	if n := strings.TrimSpace(r.FormValue("name")); n != "" {
+		name = n
+	}
+	im, err := a.addImage(name, data, a.now())
 	if err != nil {
 		jsonError(w, http.StatusUnprocessableEntity, err.Error())
 		return
