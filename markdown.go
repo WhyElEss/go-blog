@@ -28,6 +28,9 @@ import (
 //   - A YouTube link alone in its paragraph becomes an embedded player.
 //   - Headings take explicit anchors: ## Title {#anchor}. Others get one
 //     made from their text.
+//   - Footnotes: text[^1] and, on a line of its own, [^1]: The note.
+//   - ==text== highlights; [TOC] on its own line lists the headings below
+//     it (markdown_ext.go).
 //   - Raw HTML passes through: only the admin writes posts.
 
 var (
@@ -274,7 +277,7 @@ type markdown struct {
 
 func newMarkdown(lookup func(key string) (Image, bool)) *markdown {
 	md := goldmark.New(
-		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithExtensions(extension.GFM, extension.Footnote, dialectExtras{}),
 		goldmark.WithParserOptions(
 			parser.WithAttribute(),
 			parser.WithAutoHeadingID(),
@@ -304,12 +307,16 @@ var (
 	spaceRe = regexp.MustCompile(`\s+`)
 )
 
-var mediaRe = regexp.MustCompile(`(?s)<figure\b.*?</figure>|<div class="embed">.*?</div>|<table\b.*?</table>`)
+var mediaRe = regexp.MustCompile(`(?s)<figure\b.*?</figure>|<div class="embed">.*?</div>|<table\b.*?</table>|<nav class="toc">.*?</nav>|<div class="footnotes".*?</div>`)
+
+// noteRefRe finds the footnote marks in the text, which go without a space.
+var noteRefRe = regexp.MustCompile(`(?s)<sup id="fnref:.*?</sup>`)
 
 // plainText strips tags from rendered HTML. Figures (with their captions),
-// players and tables are left out: they do not read as text.
+// players, tables, the table of contents and footnotes are left out: they
+// do not read as text.
 func plainText(h string) string {
-	h = mediaRe.ReplaceAllString(h, " ")
+	h = mediaRe.ReplaceAllString(noteRefRe.ReplaceAllString(h, ""), " ")
 	return strings.TrimSpace(spaceRe.ReplaceAllString(html.UnescapeString(tagRe.ReplaceAllString(h, " ")), " "))
 }
 

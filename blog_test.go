@@ -127,6 +127,66 @@ func TestMarkdownEmbedsAndHeadings(t *testing.T) {
 	}
 }
 
+func TestMarkdownExtras(t *testing.T) {
+	md := newMarkdown(nil)
+	for in, want := range map[string]string{
+		"a ==bright== word":     "<p>a <mark>bright</mark> word</p>",
+		"x = 1 and y == 2":      "<p>x = 1 and y == 2</p>",
+		"a ===three=== b":       "<p>a ===three=== b</p>",
+		"`==code==`":            "<p><code>==code==</code></p>",
+		"~~gone~~ and **bold**": "<p><del>gone</del> and <strong>bold</strong></p>",
+	} {
+		if h, _ := md.render(in); strings.TrimSpace(h) != want {
+			t.Errorf("%q:\n got %s\nwant %s", in, strings.TrimSpace(h), want)
+		}
+	}
+
+	// [TOC] lists the H2–H4 headings after it, nested by level, skipping
+	// an H4 straight under an H2 into the inner list.
+	h, _ := md.render("# Title\n\n[TOC]\n\n## One\n\n### One a {#oa}\n\n## Two\n\n#### Deep\n\n### Mid\n\n##### Too deep\n")
+	want := `<nav class="toc">
+<ul>
+<li><a href="#one">One</a>
+<ul>
+<li><a href="#oa">One a</a></li>
+</ul>
+</li>
+<li><a href="#two">Two</a>
+<ul>
+<li><a href="#deep">Deep</a></li>
+<li><a href="#mid">Mid</a></li>
+</ul>
+</li>
+</ul>
+</nav>`
+	if !strings.Contains(h, want) {
+		t.Errorf("toc:\n%s", h)
+	}
+	if strings.Contains(h, "[TOC]") || strings.Contains(h, "Title</a>") || strings.Contains(h, "Too deep</a>") {
+		t.Errorf("toc lists the wrong headings:\n%s", h)
+	}
+	// A [TOC] inside other text stays text.
+	if h, _ := md.render("See [TOC] here.\n\n## A\n"); !strings.Contains(h, "See [TOC] here.") || strings.Contains(h, "toc") {
+		t.Errorf("inline [TOC]:\n%s", h)
+	}
+
+	h, _ = md.render("Text[^1].\n\n[^1]: The note.\n")
+	if !strings.Contains(h, `href="#fn:1"`) || !strings.Contains(h, `class="footnotes"`) || !strings.Contains(h, "The note.") {
+		t.Errorf("footnote:\n%s", h)
+	}
+	if got := plainText(h); got != "Text." {
+		t.Errorf("footnotes in the excerpt: %q", got)
+	}
+	if got := plainText(func() string { h, _ := md.render("[TOC]\n\n## A\n\nBody.\n"); return h }()); got != "A Body." {
+		t.Errorf("toc in the excerpt: %q", got)
+	}
+
+	h, _ = md.render("- [ ] todo\n- [x] done\n")
+	if strings.Count(h, `type="checkbox"`) != 2 {
+		t.Errorf("task list:\n%s", h)
+	}
+}
+
 func TestYoutubeVideo(t *testing.T) {
 	ok := []string{
 		"https://www.youtube.com/watch?v=5ZCjaHQJIm8",

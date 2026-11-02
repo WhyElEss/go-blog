@@ -7,6 +7,7 @@
   --soft: #f5f5f7;
   --accent: #1488cc;
   --accent-ink: #0b6aa3;
+  --mark: #fff0a8;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -17,6 +18,7 @@
     --soft: #222226;
     --accent: #4fb3ea;
     --accent-ink: #7cc8f2;
+    --mark: #5c4d12;
   }
 }
 
@@ -55,6 +57,27 @@
 .content th, .content td { border-bottom: 1px solid var(--line); padding: .5em .7em; text-align: left; vertical-align: top; }
 .content th { font-weight: 600; }
 .content img { max-width: 100%; height: auto; }
+.content mark { background: var(--mark); color: inherit; padding: 0 .15em; border-radius: 3px; }
+.content del { color: var(--muted); }
+.content li:has(> input[type="checkbox"]) { list-style: none; margin-left: -1.4em; }
+.content li > input[type="checkbox"] { width: auto; padding: 0; margin: 0 .5em 0 0; vertical-align: -.1em; }
+
+/* [TOC]: the headings below it. */
+.content .toc { background: var(--soft); border-radius: 8px; padding: .9em 1.2em; margin: 0 0 1.5em; font-size: 1rem; clear: both; }
+.content .toc ul { margin: 0; padding-left: 1.2em; }
+.content .toc > ul { padding-left: 0; list-style: none; }
+.content .toc li + li, .content .toc li > ul { margin-top: .25em; }
+.content .toc a { text-decoration: none; }
+.content .toc a:hover { text-decoration: underline; }
+
+/* Footnotes: the marks in the text and the notes at the end. */
+.content .footnote-ref { text-decoration: none; padding: 0 .1em; }
+.content sup { line-height: 0; }
+.content .footnotes { font-size: .9rem; color: var(--muted); clear: both; }
+.content .footnotes hr { margin: 2.5em 0 1.25em; }
+.content .footnotes ol { padding-left: 1.4em; }
+.content .footnotes p { margin: 0; }
+.content .footnote-backref { text-decoration: none; }
 
 /* Figures: #center spans the column, #left / #right float beside the text. */
 .content .fig { margin: 0 0 1.25em; }

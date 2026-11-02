@@ -18,18 +18,33 @@
   <input class="title-input" name="title_{{.Lang}}" value="{{.Title}}" placeholder="{{t $.Lang "title"}} · {{.Name}}" lang="{{.Lang}}" data-pane="{{.Lang}}"{{if ne $i 0}} hidden{{end}}>
   {{end}}
 
-  <div class="toolbar" role="toolbar">
-    <button type="button" data-md="bold" title="Bold (⌘B)"><b>B</b></button>
-    <button type="button" data-md="italic" title="Italic (⌘I)"><i>I</i></button>
-    <button type="button" data-md="h2">H2</button>
-    <button type="button" data-md="h3">H3</button>
-    <button type="button" data-md="link" title="Link (⌘K)">🔗</button>
-    <button type="button" data-md="quote">❝</button>
-    <button type="button" data-md="list">•</button>
+  <div class="toolbar" role="toolbar" data-url="{{t .Lang "tb_url"}}" data-yt-url="{{t .Lang "tb_yt_url"}}">
+    <button type="button" data-md="bold" title="{{t .Lang "tb_bold"}} (⌘B)" aria-label="{{t .Lang "tb_bold"}}"><b>B</b></button>
+    <button type="button" data-md="italic" title="{{t .Lang "tb_italic"}} (⌘I)" aria-label="{{t .Lang "tb_italic"}}"><i>I</i></button>
+    <button type="button" data-md="strike" title="{{t .Lang "tb_strike"}}" aria-label="{{t .Lang "tb_strike"}}"><s>S</s></button>
+    <button type="button" data-md="mark" title="{{t .Lang "tb_mark"}}" aria-label="{{t .Lang "tb_mark"}}"><mark>A</mark></button>
+    <button type="button" data-md="code" title="{{t .Lang "tb_code"}}" aria-label="{{t .Lang "tb_code"}}"><code>&lt;/&gt;</code></button>
+    <button type="button" data-md="link" title="{{t .Lang "tb_link"}} (⌘K)" aria-label="{{t .Lang "tb_link"}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 9.5a3 3 0 0 0 4.2 0l2.4-2.4a3 3 0 0 0-4.2-4.2l-.9.9"/><path d="M9.5 6.5a3 3 0 0 0-4.2 0L2.9 8.9a3 3 0 0 0 4.2 4.2l.9-.9"/></svg></button>
     <span class="sep"></span>
-    <button type="button" data-img="left" title="{{t .Lang "img_left"}}">◧ {{t .Lang "img_left"}}</button>
-    <button type="button" data-img="center" title="{{t .Lang "img_center"}}">▣ {{t .Lang "img_center"}}</button>
-    <button type="button" data-img="right" title="{{t .Lang "img_right"}}">◨ {{t .Lang "img_right"}}</button>
+    <button type="button" data-md="h2" title="{{t .Lang "tb_h2"}}" aria-label="{{t .Lang "tb_h2"}}">H2</button>
+    <button type="button" data-md="h3" title="{{t .Lang "tb_h3"}}" aria-label="{{t .Lang "tb_h3"}}">H3</button>
+    <button type="button" data-md="h4" title="{{t .Lang "tb_h4"}}" aria-label="{{t .Lang "tb_h4"}}">H4</button>
+    <span class="sep"></span>
+    <button type="button" data-md="list" title="{{t .Lang "tb_list"}}" aria-label="{{t .Lang "tb_list"}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="3" cy="4" r=".6"/><circle cx="3" cy="8" r=".6"/><circle cx="3" cy="12" r=".6"/><path d="M6.5 4h7M6.5 8h7M6.5 12h7"/></svg></button>
+    <button type="button" data-md="olist" title="{{t .Lang "tb_olist"}}" aria-label="{{t .Lang "tb_olist"}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 2.8 3.4 2.3v3.4M2.4 9.4c.2-.6 1.7-.8 1.7.2 0 .7-1.8 1.4-1.8 2h1.9M6.5 4h7M6.5 8h7M6.5 12h7"/></svg></button>
+    <button type="button" data-md="task" title="{{t .Lang "tb_task"}}" aria-label="{{t .Lang "tb_task"}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.8" y="2" width="4" height="4" rx=".8"/><path d="m2.7 11.2 1 1 1.8-2.1"/><path d="M8 4h5.5M8 11.5h5.5"/></svg></button>
+    <button type="button" data-md="quote" title="{{t .Lang "tb_quote"}}" aria-label="{{t .Lang "tb_quote"}}">❝</button>
+    <button type="button" data-md="codeblock" title="{{t .Lang "tb_codeblock"}}" aria-label="{{t .Lang "tb_codeblock"}}"><code>{ }</code></button>
+    <button type="button" data-md="table" title="{{t .Lang "tb_table"}}" aria-label="{{t .Lang "tb_table"}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6.5h12M2 9.8h12M6 3v10M10 3v10"/></svg></button>
+    <button type="button" data-md="hr" title="{{t .Lang "tb_hr"}}" aria-label="{{t .Lang "tb_hr"}}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8h12"/></svg></button>
+    <button type="button" data-md="footnote" title="{{t .Lang "tb_footnote"}}" aria-label="{{t .Lang "tb_footnote"}}">x<sup>1</sup></button>
+    <button type="button" data-md="toc" title="{{t .Lang "tb_toc"}}" aria-label="{{t .Lang "tb_toc"}}">{{t .Lang "tb_toc_label"}}</button>
+    <span class="sep"></span>
+    <span class="tb-label">{{t .Lang "tb_image"}}</span>
+    <button type="button" data-img="left" title="{{t .Lang "img_left"}}" aria-label="{{t .Lang "img_left"}}">◧</button>
+    <button type="button" data-img="center" title="{{t .Lang "img_center"}}" aria-label="{{t .Lang "img_center"}}">▣</button>
+    <button type="button" data-img="right" title="{{t .Lang "img_right"}}" aria-label="{{t .Lang "img_right"}}">◨</button>
+    <button type="button" data-md="youtube" title="{{t .Lang "tb_youtube"}}" aria-label="{{t .Lang "tb_youtube"}}">▶ YouTube</button>
     <span class="status" id="upload-status" data-uploading="{{t .Lang "uploading"}}" data-failed="{{t .Lang "upload_failed"}}"></span>
   </div>
   <input type="file" id="img-file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" hidden>

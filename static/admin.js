@@ -175,28 +175,74 @@
     body.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
-  // linePrefix adds a prefix to every selected line.
+  // linePrefix puts a prefix on every selected line, in place of any
+  // heading, quote or list marker it had. prefix may be a function of the
+  // line's number, for numbered lists.
   function linePrefix(prefix) {
     const v = body.value;
     let s = body.selectionStart;
     while (s > 0 && v[s - 1] !== "\n") s--;
     const e = body.selectionEnd;
-    const lines = v.slice(s, e).split("\n").map((l) => prefix + l.replace(/^(#{1,6} |> |- )/, ""));
+    const at = typeof prefix === "function" ? prefix : () => prefix;
+    const lines = v
+      .slice(s, e)
+      .split("\n")
+      .map((l, i) => at(i) + l.replace(/^(#{1,6} |> |[-*+] \[[ xX]\] |[-*+] |\d+[.)] )/, ""));
     body.focus();
     body.setRangeText(lines.join("\n"), s, e, "end");
     body.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
+  // fenced wraps the selection, or a placeholder, in a code block and
+  // selects what is inside.
+  function fenced() {
+    const s = body.selectionStart, e = body.selectionEnd;
+    const sel = body.value.slice(s, e) || "code";
+    insertBlock("```\n" + sel + "\n```");
+    const at = body.value.lastIndexOf(sel + "\n```", body.selectionEnd);
+    if (at >= 0) body.setSelectionRange(at, at + sel.length);
+  }
+
+  // footnote puts the next free [^n] at the caret and its note at the end
+  // of the text, with the caret there to write it.
+  function footnote() {
+    const used = Array.from(body.value.matchAll(/\[\^(\d+)\]/g), (m) => +m[1]);
+    const n = used.length ? Math.max(...used) + 1 : 1;
+    const e = body.selectionEnd;
+    body.focus();
+    body.setRangeText("[^" + n + "]", e, e, "end");
+    const v = body.value.replace(/\s*$/, "");
+    body.value = v + "\n\n[^" + n + "]: ";
+    body.setSelectionRange(body.value.length, body.value.length);
+    body.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  const toolbar = $(".toolbar");
   const actions = {
     bold: () => insert("**", "**", "text"),
     italic: () => insert("_", "_", "text"),
+    strike: () => insert("~~", "~~", "text"),
+    mark: () => insert("==", "==", "text"),
+    code: () => insert("`", "`", "code"),
     h2: () => linePrefix("## "),
     h3: () => linePrefix("### "),
+    h4: () => linePrefix("#### "),
     quote: () => linePrefix("> "),
     list: () => linePrefix("- "),
+    olist: () => linePrefix((i) => i + 1 + ". "),
+    task: () => linePrefix("- [ ] "),
+    codeblock: fenced,
+    table: () => insertBlock("| Column | Column |\n| --- | --- |\n| Cell | Cell |\n| Cell | Cell |"),
+    hr: () => insertBlock("---"),
+    footnote: footnote,
+    toc: () => insertBlock("[TOC]"),
     link: () => {
-      const url = prompt("URL", "https://");
+      const url = prompt(toolbar.dataset.url, "https://");
       if (url) insert("[", "](" + url + ")", "link");
+    },
+    youtube: () => {
+      const url = prompt(toolbar.dataset.ytUrl, "https://www.youtube.com/watch?v=");
+      if (url && /^https?:\/\/\S+$/.test(url.trim())) insertBlock(url.trim());
     },
   };
   $$("[data-md]").forEach((b) => b.addEventListener("click", () => actions[b.dataset.md]()));

@@ -11,7 +11,7 @@
 <script src="/static/admin.js?v={{.Version}}" defer></script>
 </head>
 <body class="admin">
-<header class="a-head">
+<header class="a-head"><div class="a-head-in">
   {{if not .NoNav}}
   <nav class="a-nav">
     <a href="/admin/"{{if eq .Path "/admin/"}} class="on"{{end}}>{{t .Lang "posts"}}</a>
@@ -25,7 +25,7 @@
     <span class="langs"><a href="/admin/lang/ru?next={{.Path}}"{{if eq .Lang "ru"}} class="on"{{end}}>RU</a> <a href="/admin/lang/en?next={{.Path}}"{{if eq .Lang "en"}} class="on"{{end}}>EN</a></span>
     {{if not .NoNav}}<form method="post" action="/admin/logout"><button class="link">{{t .Lang "logout"}}</button></form>{{end}}
   </div>
-</header>
+</div></header>
 <main class="a-main">
 {{with .Flash}}<p class="flash">{{.}}</p>{{end}}
 {{with .Error}}<p class="error">{{.}}</p>{{end}}

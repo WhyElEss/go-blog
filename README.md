@@ -7,8 +7,11 @@ renders a page in a few milliseconds.
 
 ## Features
 
-- **Markdown editor** with a live preview rendered by the server, a toolbar,
-  ⌘S to save, and a warning about unsaved changes.
+- **Markdown editor** with a live preview rendered by the server, a toolbar
+  for everything the dialect has (emphasis, highlight, code, links,
+  headings, lists and task lists, quotes, code blocks, tables, dividers,
+  footnotes, a table of contents, images, YouTube), ⌘S to save, and a
+  warning about unsaved changes.
 - **Images**: upload from the toolbar, paste from the clipboard or drop onto
   the text. Every upload is decoded, turned upright from its EXIF
   orientation, scaled to at most 2000 px wide, saved with 600/1000/1400 px
@@ -57,12 +60,19 @@ This paragraph flows around the image on the right.
 This one flows around the image on the left. Without a fragment, or with
 #center, an image spans the text column.
 
+[TOC]
+
+==Highlighted== text, ~~struck~~ text and a footnote.[^1]
+
+[^1]: Footnotes are numbered and listed at the end of the post.
+
 https://www.youtube.com/watch?v=gYc5zrXC52k
 
 ## A heading with its own anchor {#anchor}
 ```
 
-An image becomes a figure only when it is alone in its paragraph. Raw HTML
+`[TOC]` alone on its line lists the H2–H4 headings after it, nested and
+linked to their anchors. An image becomes a figure only when it is alone in its paragraph. Raw HTML
 passes through: only the admin writes posts.
 
 ## English and Russian
