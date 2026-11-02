@@ -1049,7 +1049,7 @@ func TestFollowBox(t *testing.T) {
 
 	// Three profiles: a comma, then "and".
 	got := socialLinks(Settings{Bluesky: "b", Mastodon: "m", X: "x"}, "en")
-	if len(got) != 3 || got[0].Sep != "" || got[1].Sep != ", " || got[2].Sep != " and " {
+	if len(got) != 3 || got[0].Sep != "" || got[1].Sep != ", " || got[2].Sep != " and " || got[2].Name != "X-social" {
 		t.Errorf("separators %+v", got)
 	}
 }

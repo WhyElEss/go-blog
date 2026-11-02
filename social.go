@@ -34,7 +34,8 @@ func socialLinks(s Settings, lang string) []socialLink {
 	add("Bluesky", s.Bluesky, "", iconBluesky)
 	// rel="me" lets Mastodon show the blog as verified on the profile.
 	add("Mastodon", s.Mastodon, "me", iconMastodon)
-	add("X", s.X, "", iconX)
+	// A bare "X" is too small a link to hit.
+	add("X-social", s.X, "", iconX)
 	for i := range out {
 		switch {
 		case i == 0:
