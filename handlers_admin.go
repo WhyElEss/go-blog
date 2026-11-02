@@ -557,6 +557,7 @@ type settingsPage struct {
 	adminBase
 	S                  Settings
 	NavText, FooterTxt string
+	Tags               []tagRow
 }
 
 func linksText(ls []Link) string {
@@ -600,7 +601,7 @@ func parseLinks(s string) []Link {
 
 func (a *App) handleSettingsForm(w http.ResponseWriter, r *http.Request) {
 	data := settingsPage{adminBase: a.adminBase(r, t(detectLang(r), "settings"))}
-	a.store.view(func(d *Data) { data.S = d.Settings })
+	a.store.view(func(d *Data) { data.S, data.Tags = d.Settings, d.tagRows() })
 	data.NavText, data.FooterTxt = linksText(data.S.Nav), linksText(data.S.FooterNav)
 	a.render(w, http.StatusOK, "admin_settings", data)
 }
@@ -634,6 +635,37 @@ func (a *App) handleSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/admin/settings?m=saved", http.StatusSeeOther)
+}
+
+// handleTagRename renames a tag on every post. The tag page moves with the
+// name's slug; menu links to the old one are left for the admin to change.
+func (a *App) handleTagRename(w http.ResponseWriter, r *http.Request) {
+	slug, name := r.FormValue("slug"), strings.TrimSpace(r.FormValue("name"))
+	if name == "" || strings.Contains(name, ",") {
+		http.Redirect(w, r, "/admin/settings?m=tag_name_failed", http.StatusSeeOther)
+		return
+	}
+	a.saveRetag(w, r, slug, name, "tag_renamed")
+}
+
+// handleTagDelete takes a tag off every post; the posts stay.
+func (a *App) handleTagDelete(w http.ResponseWriter, r *http.Request) {
+	a.saveRetag(w, r, r.FormValue("slug"), "", "tag_deleted")
+}
+
+func (a *App) saveRetag(w http.ResponseWriter, r *http.Request, slug, name, msg string) {
+	err := a.store.update(func(d *Data) error {
+		if d.retag(slug, name) == 0 {
+			return errNoChange
+		}
+		return nil
+	})
+	if err != nil {
+		log.Printf("retag: %v", err)
+		http.Error(w, "save failed", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/admin/settings?m="+msg+"", http.StatusSeeOther)
 }
 
 // draftsFirst moves drafts above the rest, keeping the date order.

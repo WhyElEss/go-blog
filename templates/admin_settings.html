@@ -1,6 +1,7 @@
 {{define "content"}}
 <h1>{{t .Lang "settings"}}</h1>
 <form class="settings" method="post" action="/admin/settings">
+  <div class="settings-cols">
   <label>{{t .Lang "site_title"}}<input name="title" value="{{.S.Title}}" required></label>
   <label>{{t .Lang "site_lang"}}<select name="lang"><option value="en"{{if ne .S.Lang "ru"}} selected{{end}}>English</option><option value="ru"{{if eq .S.Lang "ru"}} selected{{end}}>Русский</option></select><small>{{t .Lang "site_lang_hint"}}</small></label>
   <label>{{t .Lang "site_desc"}}<textarea name="description" rows="2">{{.S.Description}}</textarea></label>
@@ -27,8 +28,29 @@
     <label>X<input type="url" name="x" value="{{.S.X}}" placeholder="https://x.com/…"></label>
     <small>{{t .Lang "profiles_hint"}}</small>
   </fieldset>
+  </div>
   <span class="status" id="upload-status" data-uploading="{{t .Lang "uploading"}}" data-failed="{{t .Lang "upload_failed"}}"></span>
   <input type="file" id="img-file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" hidden>
   <button class="btn primary">{{t .Lang "save"}}</button>
 </form>
+
+<section class="tags-admin" id="tags">
+  <h2>{{t .Lang "tags_manage"}}</h2>
+  <p class="hint">{{t .Lang "tags_manage_hint"}}</p>
+  {{if not .Tags}}<p class="muted">{{t .Lang "no_items"}}</p>{{else}}
+  <table class="list">
+    <tr><th>{{t .Lang "col_tag"}}</th><th>{{t .Lang "col_posts"}}</th><th></th></tr>
+    {{range .Tags}}
+    <tr>
+      <td><a href="/tag/{{.Slug}}/" target="_blank">{{.Name}}</a> <span class="muted">/tag/{{.Slug}}/</span></td>
+      <td>{{.Count}}</td>
+      <td><div class="tag-actions">
+        <form method="post" action="/admin/tags/rename"><input type="hidden" name="slug" value="{{.Slug}}"><input name="name" value="{{.Name}}" required aria-label="{{t $.Lang "rename"}}"><button class="btn small">{{t $.Lang "rename"}}</button></form>
+        <form method="post" action="/admin/tags/delete" data-confirm="{{t $.Lang "confirm_tag_del"}}"><input type="hidden" name="slug" value="{{.Slug}}"><button class="btn small danger">{{t $.Lang "delete"}}</button></form>
+      </div></td>
+    </tr>
+    {{end}}
+  </table>
+  {{end}}
+</section>
 {{end}}

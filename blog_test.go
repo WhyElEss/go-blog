@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1050,5 +1051,60 @@ func TestFollowBox(t *testing.T) {
 	got := socialLinks(Settings{Bluesky: "b", Mastodon: "m", X: "x"}, "en")
 	if len(got) != 3 || got[0].Sep != "" || got[1].Sep != ", " || got[2].Sep != " and " {
 		t.Errorf("separators %+v", got)
+	}
+}
+
+func TestTagAdmin(t *testing.T) {
+	a := testApp(t)
+	a.store.update(func(d *Data) error {
+		d.Posts = append(d.Posts,
+			&Post{ID: "1", Slug: "a", Title: "A", Body: "x", Lang: "en", Tags: []string{"Vinyl", "Music"}},
+			&Post{ID: "2", Slug: "b", Title: "B", Body: "x", Lang: "en", Tags: []string{"vinyl", "Canada"}, Draft: true},
+		)
+		return nil
+	})
+	post := func(path string, form url.Values) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("POST", path, strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.AddCookie(adminCookieFor(a))
+		return do(t, a, req)
+	}
+	tags := func() map[string][]string {
+		m := map[string][]string{}
+		a.store.view(func(d *Data) {
+			for _, p := range d.Posts {
+				m[p.ID] = p.Tags
+			}
+		})
+		return m
+	}
+
+	var rows []tagRow
+	a.store.view(func(d *Data) { rows = d.tagRows() })
+	if len(rows) != 3 || rows[0] != (tagRow{Name: "Vinyl", Slug: "vinyl", Count: 2}) {
+		t.Fatalf("rows %+v", rows)
+	}
+
+	// Renaming into an existing tag merges, with no duplicate.
+	if rec := post("/admin/tags/rename", url.Values{"slug": {"vinyl"}, "name": {"Music"}}); rec.Code != http.StatusSeeOther {
+		t.Fatalf("rename: %d", rec.Code)
+	}
+	if m := tags(); !slices.Equal(m["1"], []string{"Music"}) || !slices.Equal(m["2"], []string{"Music", "Canada"}) {
+		t.Fatalf("after rename %v", m)
+	}
+
+	if rec := post("/admin/tags/rename", url.Values{"slug": {"music"}, "name": {"a, b"}}); !strings.Contains(rec.Header().Get("Location"), "tag_name_failed") {
+		t.Fatalf("comma accepted: %s", rec.Header().Get("Location"))
+	}
+
+	post("/admin/tags/delete", url.Values{"slug": {"music"}})
+	if m := tags(); len(m["1"]) != 0 || !slices.Equal(m["2"], []string{"Canada"}) {
+		t.Fatalf("after delete %v", m)
+	}
+
+	req := httptest.NewRequest("GET", "/admin/settings", nil)
+	req.AddCookie(adminCookieFor(a))
+	if b := do(t, a, req).Body.String(); !strings.Contains(b, `<a href="/tag/canada/" target="_blank">Canada</a>`) {
+		t.Error("settings page has no tag list")
 	}
 }

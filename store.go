@@ -212,6 +212,66 @@ func (d *Data) imageUses(key string) int {
 	return n
 }
 
+// tagRow is a tag as the settings page lists it. Posts share a tag by its
+// slug, so "Vinyl" and "vinyl" are one tag, named by its first spelling.
+type tagRow struct {
+	Name, Slug string
+	Count      int
+}
+
+// tagRows lists every tag on posts and pages, drafts included, most used
+// first.
+func (d *Data) tagRows() []tagRow {
+	var rows []tagRow
+	at := map[string]int{}
+	for _, p := range d.Posts {
+		for _, tg := range p.Tags {
+			s := tagSlug(tg)
+			i, ok := at[s]
+			if !ok {
+				i = len(rows)
+				at[s] = i
+				rows = append(rows, tagRow{Name: tg, Slug: s})
+			}
+			rows[i].Count++
+		}
+	}
+	slices.SortStableFunc(rows, func(a, b tagRow) int {
+		if a.Count != b.Count {
+			return b.Count - a.Count
+		}
+		return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+	})
+	return rows
+}
+
+// retag puts name in place of the tag with this slug on every post, or
+// drops the tag when name is empty. A name another tag already has merges
+// the two. It reports how many posts changed.
+func (d *Data) retag(slug, name string) int {
+	n := 0
+	for _, p := range d.Posts {
+		if !p.hasTag(slug) {
+			continue
+		}
+		var tags []string
+		seen := map[string]bool{}
+		for _, tg := range p.Tags {
+			if tagSlug(tg) == slug {
+				tg = name
+			}
+			if tg == "" || seen[tagSlug(tg)] {
+				continue
+			}
+			seen[tagSlug(tg)] = true
+			tags = append(tags, tg)
+		}
+		p.Tags = tags
+		n++
+	}
+	return n
+}
+
 type Store struct {
 	mu   sync.RWMutex
 	path string

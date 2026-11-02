@@ -37,7 +37,8 @@ renders a page in a few milliseconds.
 - **Light and dark** themes following the reader's system, with an optional
   separate logo for dark mode.
 - **Admin panel** in English or Russian: posts, image library with usage
-  counts, settings (title, description, menus, logo, icon).
+  counts, settings (title, description, menus, logo, icon) and a tag list
+  with post counts, where a tag can be renamed or removed across all posts.
 - **Sign-in** with a user name, a password and, optionally, a code from an
   authenticator app (TOTP, RFC 6238). Each code works once; changing any of
   it signs every other browser out.

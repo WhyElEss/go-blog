@@ -139,6 +139,8 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("POST /admin/security/signout", a.requireAdmin(a.handleSignOutOthers))
 	mux.HandleFunc("GET /admin/settings", a.requireAdmin(a.handleSettingsForm))
 	mux.HandleFunc("POST /admin/settings", a.requireAdmin(a.handleSettings))
+	mux.HandleFunc("POST /admin/tags/rename", a.requireAdmin(a.handleTagRename))
+	mux.HandleFunc("POST /admin/tags/delete", a.requireAdmin(a.handleTagDelete))
 
 	return a.secure(mux)
 }
