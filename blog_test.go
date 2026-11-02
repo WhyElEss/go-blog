@@ -1110,8 +1110,14 @@ func TestTagAdmin(t *testing.T) {
 
 	req = httptest.NewRequest("GET", "/admin/posts/1", nil)
 	req.AddCookie(adminCookieFor(a))
-	if b := do(t, a, req).Body.String(); !strings.Contains(b, `<li role="option" data-tag="Canada">Canada</li>`) {
+	b := do(t, a, req).Body.String()
+	if !strings.Contains(b, `<li role="option" data-tag="Canada">Canada</li>`) {
 		t.Error("editor has no tag menu")
+	}
+	// Prompt texts stay plain: html/template escapes attributes named *url*
+	// as addresses ("Link%20address").
+	if !strings.Contains(b, `data-link-ask="Link address"`) {
+		t.Error("link prompt text is escaped")
 	}
 }
 

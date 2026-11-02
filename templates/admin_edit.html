@@ -18,7 +18,7 @@
   <input class="title-input" name="title_{{.Lang}}" value="{{.Title}}" placeholder="{{t $.Lang "title"}} · {{.Name}}" lang="{{.Lang}}" data-pane="{{.Lang}}"{{if ne $i 0}} hidden{{end}}>
   {{end}}
 
-  <div class="toolbar" role="toolbar" data-url="{{t .Lang "tb_url"}}" data-yt-url="{{t .Lang "tb_yt_url"}}">
+  <div class="toolbar" role="toolbar" data-link-ask="{{t .Lang "tb_url"}}" data-video-ask="{{t .Lang "tb_yt_url"}}">
     <button type="button" data-md="bold" title="{{t .Lang "tb_bold"}} (⌘B)" aria-label="{{t .Lang "tb_bold"}}"><b>B</b></button>
     <button type="button" data-md="italic" title="{{t .Lang "tb_italic"}} (⌘I)" aria-label="{{t .Lang "tb_italic"}}"><i>I</i></button>
     <button type="button" data-md="strike" title="{{t .Lang "tb_strike"}}" aria-label="{{t .Lang "tb_strike"}}"><s>S</s></button>

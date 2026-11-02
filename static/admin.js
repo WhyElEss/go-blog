@@ -239,11 +239,11 @@
     footnote: footnote,
     toc: () => insertBlock("[TOC]"),
     link: () => {
-      const url = prompt(toolbar.dataset.url, "https://");
+      const url = prompt(toolbar.dataset.linkAsk, "https://");
       if (url) insert("[", "](" + url + ")", "link");
     },
     youtube: () => {
-      const url = prompt(toolbar.dataset.ytUrl, "https://www.youtube.com/watch?v=");
+      const url = prompt(toolbar.dataset.videoAsk, "https://www.youtube.com/watch?v=");
       if (url && /^https?:\/\/\S+$/.test(url.trim())) insertBlock(url.trim());
     },
   };
