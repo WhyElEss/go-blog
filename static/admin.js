@@ -287,6 +287,76 @@
     });
   });
 
+  // Tags: a list of the tags already in use under the field. It shows the
+  // ones matching the tag being typed, leaves out those already added, and
+  // a click or Enter puts the tag in place of what was typed.
+  const tagInput = $('input[name="tags"]');
+  const tagMenu = $("#tag-menu");
+  if (tagInput && tagMenu) {
+    const items = $$("li", tagMenu);
+    let active = -1;
+    const shown = () => items.filter((li) => !li.hidden);
+    const setActive = (i) => {
+      const list = shown();
+      active = list.length ? (i + list.length) % list.length : -1;
+      items.forEach((li) => li.classList.remove("on"));
+      if (active >= 0) {
+        list[active].classList.add("on");
+        list[active].scrollIntoView({ block: "nearest" });
+      }
+    };
+    const close = () => {
+      tagMenu.hidden = true;
+      tagInput.setAttribute("aria-expanded", "false");
+      active = -1;
+    };
+    const open = () => {
+      const parts = tagInput.value.split(",");
+      const typed = parts[parts.length - 1].trim().toLowerCase();
+      const have = new Set(parts.slice(0, -1).map((p) => p.trim().toLowerCase()));
+      items.forEach((li) => {
+        const name = li.dataset.tag.toLowerCase();
+        li.hidden = have.has(name) || (typed !== "" && !name.includes(typed)) || name === typed;
+      });
+      const any = shown().length > 0;
+      tagMenu.hidden = !any;
+      tagInput.setAttribute("aria-expanded", String(any));
+      active = -1;
+      items.forEach((li) => li.classList.remove("on"));
+    };
+    const pick = (li) => {
+      const parts = tagInput.value.split(",");
+      parts[parts.length - 1] = " " + li.dataset.tag;
+      tagInput.value = parts.map((p) => p.trim()).filter(Boolean).join(", ") + ", ";
+      tagInput.dispatchEvent(new Event("input", { bubbles: true }));
+      tagInput.focus();
+    };
+    tagInput.addEventListener("focus", open);
+    tagInput.addEventListener("click", open);
+    tagInput.addEventListener("input", open);
+    tagInput.addEventListener("blur", close);
+    // mousedown, not click: a click would blur the field first.
+    tagMenu.addEventListener("mousedown", (e) => {
+      const li = e.target.closest("li");
+      if (!li) return;
+      e.preventDefault();
+      pick(li);
+    });
+    tagInput.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        if (tagMenu.hidden) open();
+        e.preventDefault();
+        setActive(e.key === "ArrowDown" ? active + 1 : active < 0 ? -1 : active - 1);
+      } else if (e.key === "Enter" && !tagMenu.hidden && active >= 0) {
+        e.preventDefault();
+        pick(shown()[active]);
+      } else if (e.key === "Escape" && !tagMenu.hidden) {
+        e.preventDefault();
+        close();
+      }
+    });
+  }
+
   // Cover.
   const cover = $("#cover");
   const coverPreview = $("#cover-preview");

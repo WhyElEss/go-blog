@@ -155,7 +155,8 @@ type editPage struct {
 	Tabs      []editTab // the original language first
 	New       bool
 	TagsText  string
-	DateValue string // datetime-local
+	AllTags   []string // every tag in use, most used first, to pick from
+	DateValue string   // datetime-local
 	Live      bool
 }
 
@@ -178,6 +179,11 @@ func (a *App) editData(r *http.Request, p Post, isNew bool) editPage {
 	}
 	e := editPage{adminBase: a.adminBase(r, title), Post: p, New: isNew, TagsText: strings.Join(p.Tags, ", "), Live: p.live(a.now())}
 	e.Post.Lang = normLang(p.Lang)
+	a.store.view(func(d *Data) {
+		for _, row := range d.tagRows() {
+			e.AllTags = append(e.AllTags, row.Name)
+		}
+	})
 	e.BskyOn = a.bsky != nil
 	if p.Bluesky != nil {
 		e.BskySent = formatDate(e.Lang, p.Bluesky.SentAt.In(time.Local)) + " " + p.Bluesky.SentAt.In(time.Local).Format("15:04")

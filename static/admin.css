@@ -103,6 +103,10 @@ label.check input { width: auto; }
 
 .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1.25rem; }
 .fields .wide { grid-column: 1 / -1; }
+.tag-pick { position: relative; display: block; }
+.tag-menu { position: absolute; top: calc(100% + .2rem); left: 0; right: 0; z-index: 10; max-height: 15rem; overflow-y: auto; margin: 0; padding: .25rem; list-style: none; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, .12); }
+.tag-menu li { padding: .35rem .6rem; border-radius: 6px; color: var(--text); cursor: pointer; }
+.tag-menu li.on, .tag-menu li:hover { background: var(--soft); }
 .cover-field { display: flex; align-items: flex-end; gap: .5rem; flex-wrap: wrap; }
 .cover-field label { flex: 1; min-width: 200px; }
 #cover-preview { max-height: 90px; border-radius: 6px; }

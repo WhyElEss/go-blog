@@ -62,7 +62,7 @@
 
   <div class="fields">
     <label>{{t .Lang "slug"}}<input name="slug" value="{{.Post.Slug}}" placeholder="{{t .Lang "slug_hint"}}"></label>
-    <label>{{t .Lang "tags"}}<input name="tags" value="{{.TagsText}}" placeholder="{{t .Lang "tags_hint"}}"></label>
+    <label>{{t .Lang "tags"}}<span class="tag-pick"><input name="tags" value="{{.TagsText}}" placeholder="{{t .Lang "tags_hint"}}" autocomplete="off"{{if .AllTags}} role="combobox" aria-expanded="false" aria-controls="tag-menu"{{end}}>{{if .AllTags}}<ul class="tag-menu" id="tag-menu" role="listbox" hidden>{{range .AllTags}}<li role="option" data-tag="{{.}}">{{.}}</li>{{end}}</ul>{{end}}</span></label>
     <label>{{t .Lang "published"}}<input type="datetime-local" name="published_at" value="{{.DateValue}}"><small>{{t .Lang "published_hint"}}</small></label>
     <label>{{t .Lang "lang"}}<select name="lang"><option value="en"{{if ne .Post.Lang "ru"}} selected{{end}}>English</option><option value="ru"{{if eq .Post.Lang "ru"}} selected{{end}}>Русский</option></select><small>{{t .Lang "lang_hint"}}</small></label>
     {{range $i, $tab := .Tabs}}<label class="wide" data-pane="{{.Lang}}"{{if ne $i 0}} hidden{{end}}>{{t $.Lang "excerpt"}} · {{.Name}}<textarea name="excerpt_{{.Lang}}" rows="2" lang="{{.Lang}}">{{.Excerpt}}</textarea><small>{{t $.Lang "excerpt_hint"}}</small></label>{{end}}

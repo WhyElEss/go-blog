@@ -1107,6 +1107,12 @@ func TestTagAdmin(t *testing.T) {
 	if b := do(t, a, req).Body.String(); !strings.Contains(b, `<a href="/tag/canada/" target="_blank">Canada</a>`) {
 		t.Error("settings page has no tag list")
 	}
+
+	req = httptest.NewRequest("GET", "/admin/posts/1", nil)
+	req.AddCookie(adminCookieFor(a))
+	if b := do(t, a, req).Body.String(); !strings.Contains(b, `<li role="option" data-tag="Canada">Canada</li>`) {
+		t.Error("editor has no tag menu")
+	}
 }
 
 func TestExternalLinksNewTab(t *testing.T) {
