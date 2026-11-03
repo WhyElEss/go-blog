@@ -1187,3 +1187,19 @@ func TestUploadNamedCover(t *testing.T) {
 		t.Fatalf("upload: %d %s", rec.Code, rec.Body)
 	}
 }
+
+func TestPagerTimeline(t *testing.T) {
+	a := testApp(t)
+	a.store.update(func(d *Data) error {
+		d.Settings.PostsPerPage = 1
+		for i, slug := range []string{"one", "two", "three"} {
+			d.Posts = append(d.Posts, &Post{ID: slug, Slug: slug, Title: slug, Body: "x", Lang: "en", PublishedAt: time.Now().Add(-time.Duration(i+1) * time.Hour)})
+		}
+		return nil
+	})
+	b := do(t, a, httptest.NewRequest("GET", "/page/2/", nil)).Body.String()
+	older, newer := strings.Index(b, "← Older posts"), strings.Index(b, "Newer posts →")
+	if older < 0 || newer < 0 || older > newer {
+		t.Errorf("pager: older at %d, newer at %d", older, newer)
+	}
+}

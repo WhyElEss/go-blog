@@ -13,8 +13,8 @@ import (
 // admin).
 var messages = map[string][2]string{
 	// public
-	"newer":      {"← Новее", "← Newer posts"},
-	"older":      {"Раньше →", "Older posts →"},
+	"newer":      {"Новее →", "Newer posts →"},
+	"older":      {"← Раньше", "← Older posts"},
 	"tagged":     {"Записи с тегом", "Posts tagged"},
 	"no_posts":   {"Здесь пока ничего нет.", "Nothing here yet."},
 	"not_found":  {"Страница не найдена.", "Page not found."},

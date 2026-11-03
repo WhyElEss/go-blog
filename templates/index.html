@@ -18,8 +18,9 @@
 {{if not (or .Featured .Posts)}}<p class="empty">{{t .SiteLang "no_posts"}}</p>{{end}}
 {{if or .PrevURL .NextURL}}
 <nav class="pager">
-  {{if .PrevURL}}<a href="{{.PrevURL}}">{{t .SiteLang "newer"}}</a>{{else}}<span></span>{{end}}
-  {{if .NextURL}}<a href="{{.NextURL}}">{{t .SiteLang "older"}}</a>{{end}}
+  {{/* A timeline, as under posts: the past on the left. */}}
+  {{if .NextURL}}<a href="{{.NextURL}}">{{t .SiteLang "older"}}</a>{{else}}<span></span>{{end}}
+  {{if .PrevURL}}<a href="{{.PrevURL}}">{{t .SiteLang "newer"}}</a>{{end}}
 </nav>
 {{end}}
 {{end}}
