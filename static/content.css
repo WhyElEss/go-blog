@@ -97,7 +97,7 @@
 .content .embed { position: relative; aspect-ratio: 16 / 9; clear: both; margin: 1.75em 0; }
 .content .embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: 6px; }
 /* Apple Music: a fixed height, as in Apple's embed code (450 px for an
-   album or playlist, 175 px for a song), at most 660 px wide. */
-.content .embed-music { aspect-ratio: auto; max-width: 660px; height: 450px; }
+   album or playlist, 175 px for a song), across the text column. */
+.content .embed-music { aspect-ratio: auto; height: 450px; }
 .content .embed-music-song { height: 175px; }
 .content .embed-music iframe { border-radius: 10px; }
