@@ -101,6 +101,12 @@ choice; menu labels and the description take a translation in the settings
 no-store` and `Vary: Accept-Language, Cookie`, so no cache serves one
 reader's language to another.
 
+Search engines crawl without `Accept-Language`, so every page that exists in
+both languages (the post list, tag pages, translated posts) names its
+`?lang=en` and `?lang=ru` addresses in `hreflang` links, with the bare URL as
+`x-default`, and carries a canonical link. `/sitemap.xml`, linked from
+`robots.txt`, lists the live posts and pages the same way.
+
 Two existing posts that are translations of each other can be joined, with
 the blog stopped. The second one's URL then redirects to the first one's
 with `?lang=`:
