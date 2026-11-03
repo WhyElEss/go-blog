@@ -81,6 +81,7 @@ func TestMarkdownFigures(t *testing.T) {
 		`/img/2026/10/a.jpg 2000w`,
 		`<figcaption>A caption</figcaption>`,
 		`<p>Text beside it.</p>`,
+		`<a class="zoom" href="/img/2026/10/a.jpg" data-pswp-width="2000" data-pswp-height="1000" data-pswp-srcset="/img/2026/10/a-w600.jpg 600w, `,
 	} {
 		if !strings.Contains(h, want) {
 			t.Errorf("missing %q in\n%s", want, h)
@@ -97,6 +98,12 @@ func TestMarkdownFigures(t *testing.T) {
 	h, _ = md.render("![](/img/x.png)\n![](/img/y.png#left)\n")
 	if strings.Count(h, "<figure") != 2 || !strings.Contains(h, "fig-center") || !strings.Contains(h, "fig-left") {
 		t.Errorf("two images in one paragraph:\n%s", h)
+	}
+
+	// An image that is already a link, or not an upload, opens no gallery.
+	h, _ = md.render("[![a](/img/2026/10/a.jpg)](https://example.org/) and ![x](/img/x.png)\n")
+	if strings.Contains(h, "zoom") {
+		t.Errorf("zoom link where there should be none:\n%s", h)
 	}
 
 	h, _ = md.render("Inline ![icon](/img/i.png) in text.\n")
@@ -1201,5 +1208,35 @@ func TestPagerTimeline(t *testing.T) {
 	older, newer := strings.Index(b, "← Older posts"), strings.Index(b, "Newer posts →")
 	if older < 0 || newer < 0 || older > newer {
 		t.Errorf("pager: older at %d, newer at %d", older, newer)
+	}
+}
+
+func TestPostGallery(t *testing.T) {
+	a := testApp(t)
+	a.store.update(func(d *Data) error {
+		d.Images["2026/10/c.jpg"] = &Image{Key: "2026/10/c.jpg", Width: 1400, Height: 700, Widths: []int{600, 1000, 1400}}
+		d.Posts = append(d.Posts,
+			&Post{ID: "1", Slug: "with", Title: "With", Body: "x", Cover: "/img/2026/10/c.jpg", Lang: "en", PublishedAt: time.Now().Add(-time.Hour)},
+			&Post{ID: "2", Slug: "without", Title: "Without", Body: "x", Lang: "en", PublishedAt: time.Now().Add(-2 * time.Hour)},
+		)
+		return nil
+	})
+	b := do(t, a, httptest.NewRequest("GET", "/with/", nil)).Body.String()
+	for _, want := range []string{
+		`<a class="zoom" href="/img/2026/10/c.jpg" data-pswp-width="1400" data-pswp-height="700" data-pswp-srcset="/img/2026/10/c-w600.jpg 600w, /img/2026/10/c-w1000.jpg 1000w, /img/2026/10/c.jpg 1400w"><img`,
+		`<script type="module" src="/static/gallery.js?v=`,
+		`/static/photoswipe/photoswipe.css?v=`,
+	} {
+		if !strings.Contains(b, want) {
+			t.Errorf("missing %s", want)
+		}
+	}
+	if b := do(t, a, httptest.NewRequest("GET", "/without/", nil)).Body.String(); strings.Contains(b, "gallery.js") {
+		t.Error("gallery loaded on a post without images")
+	}
+	for _, f := range []string{"/static/gallery.js", "/static/photoswipe/photoswipe-lightbox.esm.min.js", "/static/photoswipe/photoswipe.esm.min.js", "/static/photoswipe/photoswipe.css"} {
+		if rec := do(t, a, httptest.NewRequest("GET", f, nil)); rec.Code != 200 {
+			t.Errorf("%s: %d", f, rec.Code)
+		}
 	}
 }

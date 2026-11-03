@@ -95,6 +95,8 @@ label.check input { width: auto; }
 .preview-wrap { padding: 1rem 1.25rem; max-height: 70vh; overflow-y: auto; min-height: 70vh; }
 .preview-label { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: .75rem; }
 #preview { max-width: 720px; }
+/* A click in the preview must not leave the editor. */
+#preview a.zoom { pointer-events: none; }
 @media (max-width: 900px) {
   .split { grid-template-columns: 1fr; }
   .split textarea { border-right: 0; border-bottom: 1px solid var(--line); min-height: 50vh; }

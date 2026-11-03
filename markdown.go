@@ -217,25 +217,56 @@ var imageSizes = map[string]string{
 	"right":  "(min-width: 760px) 330px, (min-width: 560px) 45vw, calc(100vw - 32px)",
 }
 
-func (r *imageRenderer) writeImg(w util.BufWriter, src, alt, title, align string) {
+// srcset lists an uploaded image's copies for the srcset attribute.
+func srcset(im Image) string {
+	var set []string
+	for _, wd := range im.Widths {
+		set = append(set, fmt.Sprintf("%s %dw", variantURL(im.Key, im.Width, wd), wd))
+	}
+	return strings.Join(set, ", ")
+}
+
+// writeImg writes an image. An uploaded one, whose size is known, is
+// wrapped in a link to its full copy that the gallery on post pages opens
+// (static/gallery.js); zoom is false where the image is already a link.
+func (r *imageRenderer) writeImg(w util.BufWriter, src, alt, title, align string, zoom bool) {
 	esc := html.EscapeString
+	var im Image
+	known := false
+	if key, ok := strings.CutPrefix(src, "/img/"); ok && r.lookup != nil {
+		im, known = r.lookup(key)
+	}
+	if known && zoom {
+		fmt.Fprintf(w, `<a class="zoom" href="%s" data-pswp-width="%d" data-pswp-height="%d"`, esc(src), im.Width, im.Height)
+		if len(im.Widths) > 1 {
+			fmt.Fprintf(w, ` data-pswp-srcset="%s"`, esc(srcset(im)))
+		}
+		w.WriteString(">")
+	}
 	fmt.Fprintf(w, `<img src="%s" alt="%s"`, esc(src), esc(alt))
 	if title != "" {
 		fmt.Fprintf(w, ` title="%s"`, esc(title))
 	}
-	if key, ok := strings.CutPrefix(src, "/img/"); ok && r.lookup != nil {
-		if im, ok := r.lookup(key); ok {
-			fmt.Fprintf(w, ` width="%d" height="%d"`, im.Width, im.Height)
-			if len(im.Widths) > 1 {
-				var set []string
-				for _, wd := range im.Widths {
-					set = append(set, fmt.Sprintf("%s %dw", esc(variantURL(im.Key, im.Width, wd)), wd))
-				}
-				fmt.Fprintf(w, ` srcset="%s" sizes="%s"`, strings.Join(set, ", "), imageSizes[align])
-			}
+	if known {
+		fmt.Fprintf(w, ` width="%d" height="%d"`, im.Width, im.Height)
+		if len(im.Widths) > 1 {
+			fmt.Fprintf(w, ` srcset="%s" sizes="%s"`, esc(srcset(im)), imageSizes[align])
 		}
 	}
 	w.WriteString(` loading="lazy" decoding="async">`)
+	if known && zoom {
+		w.WriteString("</a>")
+	}
+}
+
+// inLink reports whether n sits inside a link.
+func inLink(n ast.Node) bool {
+	for p := n.Parent(); p != nil; p = p.Parent() {
+		if p.Kind() == ast.KindLink || p.Kind() == ast.KindAutoLink {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *imageRenderer) renderFigure(w util.BufWriter, src []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -244,7 +275,7 @@ func (r *imageRenderer) renderFigure(w util.BufWriter, src []byte, node ast.Node
 	}
 	n := node.(*figureNode)
 	fmt.Fprintf(w, "<figure class=\"fig fig-%s\">", n.align)
-	r.writeImg(w, n.src, n.alt, "", n.align)
+	r.writeImg(w, n.src, n.alt, "", n.align, true)
 	if n.caption != "" {
 		fmt.Fprintf(w, "<figcaption>%s</figcaption>", html.EscapeString(n.caption))
 	}
@@ -267,7 +298,7 @@ func (r *imageRenderer) renderImage(w util.BufWriter, src []byte, node ast.Node,
 	}
 	n := node.(*ast.Image)
 	s, _ := splitAlign(string(n.Destination))
-	r.writeImg(w, s, nodeText(n, src), string(n.Title), "center")
+	r.writeImg(w, s, nodeText(n, src), string(n.Title), "center", !inLink(n))
 	return ast.WalkSkipChildren, nil
 }
 

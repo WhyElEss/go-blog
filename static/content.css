@@ -82,6 +82,9 @@
 /* Figures: #center spans the column, #left / #right float beside the text. */
 .content .fig { margin: 0 0 1.25em; }
 .content .fig img { display: block; width: 100%; height: auto; border-radius: 6px; }
+/* Images that open in the gallery (static/gallery.js). */
+.content a.zoom { cursor: zoom-in; }
+.content .fig a.zoom { display: block; }
 .content .fig figcaption { font-size: .85rem; color: var(--muted); margin-top: .5em; text-align: center; line-height: 1.4; }
 .content .fig-center { clear: both; margin: 1.75em 0; }
 .content .fig-left, .content .fig-right { width: 46%; margin-top: .35em; }

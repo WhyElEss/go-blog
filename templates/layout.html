@@ -27,6 +27,8 @@
 <link rel="stylesheet" href="/static/content.css?v={{.Version}}">
 <link rel="stylesheet" href="/static/style.css?v={{.Version}}">
 <script src="/static/site.js?v={{.Version}}" defer></script>
+{{if .Gallery}}<link rel="stylesheet" href="/static/photoswipe/photoswipe.css?v={{.Version}}">
+<script type="module" src="/static/gallery.js?v={{.Version}}" data-lang="{{.SiteLang}}"></script>{{end}}
 </head>
 <body>
 <div class="top-sentinel" aria-hidden="true"></div>

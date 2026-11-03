@@ -75,6 +75,7 @@ main.wrap { flex: 1; padding-top: 2.5rem; padding-bottom: 3rem; }
 .post-head { margin-bottom: 1.75rem; }
 .post-cover { margin: 0 0 2rem; }
 .post-cover img { display: block; width: 100%; height: auto; border-radius: 8px; }
+.post-cover a.zoom { display: block; cursor: zoom-in; }
 .notice { background: var(--soft); border-radius: 8px; padding: .6rem .9rem; font-size: .95rem; }
 .notice a { color: var(--accent-ink); }
 .empty, .message { color: var(--muted); }

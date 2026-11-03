@@ -20,6 +20,11 @@ renders a page in a few milliseconds.
   JPEG) and SVG.
 - **Image placement** next to the text: left, right or centre, with an
   optional caption. Floats turn into full-width images on phones.
+- **Gallery**: a click on a post's picture, cover included, opens it full
+  screen to page through all of the post's pictures, using
+  [PhotoSwipe](https://photoswipe.com) 5.4.4 (MIT, kept in
+  `static/photoswipe/` with its licence). Without scripts the click opens
+  the image itself.
 - **YouTube**: a link on its own line becomes a privacy-enhanced player.
 - **Bluesky**: a box in the editor posts a link card for the post (cover,
   title, excerpt) once it is published, scheduled posts included. Signs in

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html"
 	"html/template"
 	"log"
 	"net/http"
@@ -36,6 +37,8 @@ type pageBase struct {
 	Admin   bool
 	Version string
 	Year    int
+	// Gallery loads the picture viewer: the page has images that open in it.
+	Gallery bool
 }
 
 func (a *App) pageBase(r *http.Request, title string) pageBase {
@@ -104,12 +107,7 @@ func (a *App) toCard(p Post, v postText, uiLang string, now time.Time) card {
 	}
 	if key, ok := strings.CutPrefix(p.Cover, "/img/"); ok {
 		if im, ok := a.store.image(key); ok {
-			c.CoverW, c.CoverH = im.Width, im.Height
-			var set []string
-			for _, w := range im.Widths {
-				set = append(set, fmt.Sprintf("%s %dw", variantURL(im.Key, im.Width, w), w))
-			}
-			c.CoverSrcset = strings.Join(set, ", ")
+			c.CoverW, c.CoverH, c.CoverSrcset = im.Width, im.Height, srcset(im)
 		}
 	}
 	return c
@@ -228,6 +226,10 @@ type postPage struct {
 	EditURL string
 	// Social lists the profiles for the box under a post.
 	Social []socialLink
+	// CoverZoom is the cover link's attributes for the gallery. It is
+	// written in Go: html/template would treat data-pswp-srcset, a name
+	// with "src" in it, as a URL and escape its spaces and commas.
+	CoverZoom template.HTMLAttr
 }
 
 // handleSlugPath serves /{slug}/ and sends /{slug} there.
@@ -315,6 +317,15 @@ func (a *App) handlePost(w http.ResponseWriter, r *http.Request, slug string) {
 	if !p.Page {
 		a.store.view(func(d *Data) { data.Social = socialLinks(d.Settings, lang) })
 	}
+	if c := data.Post; c.CoverW > 0 {
+		esc := html.EscapeString
+		attrs := fmt.Sprintf(` href="%s" data-pswp-width="%d" data-pswp-height="%d"`, esc(c.Cover), c.CoverW, c.CoverH)
+		if c.CoverSrcset != "" {
+			attrs += fmt.Sprintf(` data-pswp-srcset="%s"`, esc(c.CoverSrcset))
+		}
+		data.CoverZoom = template.HTMLAttr(attrs)
+	}
+	data.Gallery = data.CoverZoom != "" || strings.Contains(string(data.HTML), `<a class="zoom"`)
 	a.render(w, http.StatusOK, "post", data)
 }
 
