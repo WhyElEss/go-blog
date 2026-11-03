@@ -25,7 +25,9 @@ renders a page in a few milliseconds.
   [PhotoSwipe](https://photoswipe.com) 5.4.4 (MIT, kept in
   `static/photoswipe/` with its licence). Without scripts the click opens
   the image itself.
-- **YouTube**: a link on its own line becomes a privacy-enhanced player.
+- **YouTube and Apple Music**: a YouTube link on its own line becomes a
+  privacy-enhanced player; an Apple Music album, playlist or song link
+  becomes Apple's player.
 - **Bluesky**: a box in the editor posts a link card for the post (cover,
   title, excerpt) once it is published, scheduled posts included. Signs in
   with an app password; a post is never sent twice.

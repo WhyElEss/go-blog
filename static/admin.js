@@ -246,6 +246,10 @@
       const url = prompt(toolbar.dataset.videoAsk, "https://www.youtube.com/watch?v=");
       if (url && /^https?:\/\/\S+$/.test(url.trim())) insertBlock(url.trim());
     },
+    music: () => {
+      const url = prompt(toolbar.dataset.musicAsk, "https://music.apple.com/");
+      if (url && /^https:\/\/music\.apple\.com\/\S+$/.test(url.trim())) insertBlock(url.trim());
+    },
   };
   $$("[data-md]").forEach((b) => b.addEventListener("click", () => actions[b.dataset.md]()));
 

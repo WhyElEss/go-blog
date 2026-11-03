@@ -172,7 +172,7 @@ func (a *App) secure(h http.Handler) http.Handler {
 		hd.Set("X-Frame-Options", "DENY")
 		hd.Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		// Posts may show images from other sites and YouTube players.
-		hd.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; frame-src https://www.youtube-nocookie.com https://www.youtube.com; style-src 'self'; script-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
+		hd.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; frame-src https://www.youtube-nocookie.com https://www.youtube.com https://embed.music.apple.com; style-src 'self'; script-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
 		if r.Method == http.MethodPost && !a.sameOrigin(r) {
 			http.Error(w, "cross-site request refused", http.StatusForbidden)
 			return

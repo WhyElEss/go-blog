@@ -18,7 +18,7 @@
   <input class="title-input" name="title_{{.Lang}}" value="{{.Title}}" placeholder="{{t $.Lang "title"}} · {{.Name}}" lang="{{.Lang}}" data-pane="{{.Lang}}"{{if ne $i 0}} hidden{{end}}>
   {{end}}
 
-  <div class="toolbar" role="toolbar" data-link-ask="{{t .Lang "tb_url"}}" data-video-ask="{{t .Lang "tb_yt_url"}}">
+  <div class="toolbar" role="toolbar" data-link-ask="{{t .Lang "tb_url"}}" data-video-ask="{{t .Lang "tb_yt_url"}}" data-music-ask="{{t .Lang "tb_music_url"}}">
     <button type="button" data-md="bold" title="{{t .Lang "tb_bold"}} (⌘B)" aria-label="{{t .Lang "tb_bold"}}"><b>B</b></button>
     <button type="button" data-md="italic" title="{{t .Lang "tb_italic"}} (⌘I)" aria-label="{{t .Lang "tb_italic"}}"><i>I</i></button>
     <button type="button" data-md="strike" title="{{t .Lang "tb_strike"}}" aria-label="{{t .Lang "tb_strike"}}"><s>S</s></button>
@@ -45,6 +45,7 @@
     <button type="button" data-img="center" title="{{t .Lang "img_center"}}" aria-label="{{t .Lang "img_center"}}">▣</button>
     <button type="button" data-img="right" title="{{t .Lang "img_right"}}" aria-label="{{t .Lang "img_right"}}">◨</button>
     <button type="button" data-md="youtube" title="{{t .Lang "tb_youtube"}}" aria-label="{{t .Lang "tb_youtube"}}">▶ YouTube</button>
+    <button type="button" data-md="music" title="{{t .Lang "tb_music"}}" aria-label="{{t .Lang "tb_music"}}">♫ Apple Music</button>
     <span class="status" id="upload-status" data-uploading="{{t .Lang "uploading"}}" data-failed="{{t .Lang "upload_failed"}}"></span>
   </div>
   <input type="file" id="img-file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" hidden>

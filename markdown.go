@@ -6,6 +6,7 @@ import (
 	"html"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/yuin/goldmark"
@@ -25,7 +26,8 @@ import (
 //     places it: ![alt](/img/a.jpg#right) floats right of the following text,
 //     #left floats left, #center (or nothing) sits centred across the column.
 //     The image title becomes the caption: ![alt](/img/a.jpg#left "Caption").
-//   - A YouTube link alone in its paragraph becomes an embedded player.
+//   - A YouTube link alone in its paragraph becomes an embedded player, and
+//     so does an Apple Music album, playlist or song link.
 //   - Headings take explicit anchors: ## Title {#anchor}. Others get one
 //     made from their text.
 //   - Footnotes: text[^1] and, on a line of its own, [^1]: The note.
@@ -51,11 +53,13 @@ func (n *figureNode) Dump(src []byte, level int) {
 type embedNode struct {
 	ast.BaseBlock
 	video string // YouTube video ID
+	music string // Apple Music player URL, on embed.music.apple.com
+	song  bool   // the music player is a single song, a short one
 }
 
 func (n *embedNode) Kind() ast.NodeKind { return kindEmbed }
 func (n *embedNode) Dump(src []byte, level int) {
-	ast.DumpHelper(n, src, level, map[string]string{"video": n.video}, nil)
+	ast.DumpHelper(n, src, level, map[string]string{"video": n.video, "music": n.music}, nil)
 }
 
 // splitAlign takes the placement fragment off an image URL.
@@ -71,6 +75,32 @@ func splitAlign(dest string) (src, align string) {
 }
 
 var youtubeID = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
+
+var appleMusicPath = regexp.MustCompile(`^/[a-z]{2}/(album|playlist|song)/[^/]+/[A-Za-z0-9._-]+$`)
+
+// appleMusic turns an Apple Music album, playlist or song link
+// (music.apple.com/ca/album/name/123, a song in it with ?i=456) into the
+// address of its player, and says whether that is a single song.
+func appleMusic(raw string) (player string, song bool) {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || u.Scheme != "https" || !strings.EqualFold(u.Host, "music.apple.com") {
+		return "", false
+	}
+	m := appleMusicPath.FindStringSubmatch(u.EscapedPath())
+	if m == nil {
+		return "", false
+	}
+	player = "https://embed.music.apple.com" + u.EscapedPath()
+	song = m[1] == "song"
+	if i := u.Query().Get("i"); i != "" && m[1] == "album" {
+		if _, err := strconv.ParseUint(i, 10, 64); err != nil {
+			return "", false
+		}
+		player += "?i=" + i
+		song = true
+	}
+	return player, song
+}
 
 // youtubeVideo returns the video ID of a YouTube watch, short or embed URL.
 func youtubeVideo(raw string) string {
@@ -177,6 +207,8 @@ func (blockTransformer) Transform(doc *ast.Document, reader text.Reader, pc pars
 		if count == 1 && link != "" {
 			if id := youtubeVideo(link); id != "" {
 				parent.ReplaceChild(parent, p, &embedNode{video: id})
+			} else if player, song := appleMusic(link); player != "" {
+				parent.ReplaceChild(parent, p, &embedNode{music: player, song: song})
 			}
 		}
 	}
@@ -287,7 +319,18 @@ func (r *imageRenderer) renderEmbed(w util.BufWriter, src []byte, node ast.Node,
 	if !entering {
 		return ast.WalkContinue, nil
 	}
-	id := node.(*embedNode).video
+	n := node.(*embedNode)
+	if n.music != "" {
+		// Apple's own embed code, with the size set in content.css: the
+		// site's CSP takes no style attributes.
+		kind := "album"
+		if n.song {
+			kind = "song"
+		}
+		fmt.Fprintf(w, `<div class="embed embed-music embed-music-%s"><iframe src="%s" title="Apple Music" allow="autoplay *; encrypted-media *; clipboard-write" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation" loading="lazy"></iframe></div>`+"\n", kind, html.EscapeString(n.music))
+		return ast.WalkSkipChildren, nil
+	}
+	id := n.video
 	fmt.Fprintf(w, `<div class="embed"><iframe src="https://www.youtube-nocookie.com/embed/%s" title="YouTube video" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`+"\n", id)
 	return ast.WalkSkipChildren, nil
 }
@@ -377,7 +420,7 @@ var (
 	spaceRe = regexp.MustCompile(`\s+`)
 )
 
-var mediaRe = regexp.MustCompile(`(?s)<figure\b.*?</figure>|<div class="embed">.*?</div>|<table\b.*?</table>|<nav class="toc">.*?</nav>|<div class="footnotes".*?</div>`)
+var mediaRe = regexp.MustCompile(`(?s)<figure\b.*?</figure>|<div class="embed[^"]*">.*?</div>|<table\b.*?</table>|<nav class="toc">.*?</nav>|<div class="footnotes".*?</div>`)
 
 // noteRefRe finds the footnote marks in the text, which go without a space.
 var noteRefRe = regexp.MustCompile(`(?s)<sup id="fnref:.*?</sup>`)

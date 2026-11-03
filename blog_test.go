@@ -122,6 +122,19 @@ func TestMarkdownEmbedsAndHeadings(t *testing.T) {
 		t.Errorf("a [text](url) link must stay a link:\n%s", h)
 	}
 
+	h, _ = md.render("https://music.apple.com/ca/album/im-a-rainbow-re-mastered-expanded/1587042364\n\nhttps://music.apple.com/ca/album/x/1587042364?i=1587042366&l=fr\n\nhttps://music.apple.com/ca/artist/x/123\n")
+	for _, want := range []string{
+		`<div class="embed embed-music embed-music-album"><iframe src="https://embed.music.apple.com/ca/album/im-a-rainbow-re-mastered-expanded/1587042364"`,
+		`<div class="embed embed-music embed-music-song"><iframe src="https://embed.music.apple.com/ca/album/x/1587042364?i=1587042366"`,
+	} {
+		if !strings.Contains(h, want) {
+			t.Errorf("missing %s in\n%s", want, h)
+		}
+	}
+	if strings.Count(h, "<iframe") != 2 || plainText(h) != "https://music.apple.com/ca/artist/x/123" {
+		t.Errorf("an artist link must stay a link, players stay out of the text:\n%s", h)
+	}
+
 	h, _ = md.render("## Новый или ретро?\n\n## Belt Drive {#belt}\n\n## Belt Drive\n")
 	for _, want := range []string{`<h2 id="новый-или-ретро">`, `<h2 id="belt">`, `<h2 id="belt-drive">`} {
 		if !strings.Contains(h, want) {
