@@ -1253,3 +1253,17 @@ func TestPostGallery(t *testing.T) {
 		}
 	}
 }
+
+func TestStaticCache(t *testing.T) {
+	a := testApp(t)
+	for path, want := range map[string]string{
+		"/static/style.css?v=" + version: "public, max-age=31536000, immutable",
+		"/static/style.css?v=old":        "public, max-age=86400",
+		"/static/style.css":              "public, max-age=86400",
+	} {
+		w := do(t, a, httptest.NewRequest("GET", path, nil))
+		if w.Code != 200 || w.Header().Get("Cache-Control") != want {
+			t.Errorf("%s: %d %q, want %q", path, w.Code, w.Header().Get("Cache-Control"), want)
+		}
+	}
+}

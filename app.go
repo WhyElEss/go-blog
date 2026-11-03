@@ -11,7 +11,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -95,7 +94,7 @@ func (a *App) routes() http.Handler {
 	mux := http.NewServeMux()
 
 	static, _ := fs.Sub(assets, "static")
-	mux.Handle("GET /static/", cacheFor(24*time.Hour, http.StripPrefix("/static/", http.FileServerFS(static))))
+	mux.Handle("GET /static/", staticCache(http.StripPrefix("/static/", http.FileServerFS(static))))
 	mux.HandleFunc("GET /img/{path...}", a.handleImage)
 	mux.HandleFunc("GET /content/images/{path...}", a.handleOldImage)
 	mux.HandleFunc("GET /favicon.ico", a.handleFavicon)
@@ -155,10 +154,16 @@ func redirectTo(target string) http.HandlerFunc {
 	}
 }
 
-func cacheFor(d time.Duration, h http.Handler) http.Handler {
-	maxAge := strconv.Itoa(int(d.Seconds()))
+// staticCache lets browsers keep an asset for a year when its URL names
+// this build (?v=<version>, as the templates write it): the next deploy
+// changes the URL. Any other request for it is cached for a day.
+func staticCache(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "public, max-age="+maxAge)
+		if r.URL.Query().Get("v") == version {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		} else {
+			w.Header().Set("Cache-Control", "public, max-age=86400")
+		}
 		h.ServeHTTP(w, r)
 	})
 }
