@@ -100,8 +100,9 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("GET /favicon.ico", a.handleFavicon)
 	mux.HandleFunc("GET /robots.txt", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Write([]byte("User-agent: *\nDisallow: /admin/\n"))
+		w.Write([]byte("User-agent: *\nDisallow: /admin/\n\nSitemap: " + a.origin(r) + "/sitemap.xml\n"))
 	})
+	mux.HandleFunc("GET /sitemap.xml", a.handleSitemap)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok\n")) })
 
 	mux.HandleFunc("GET /{$}", a.handleIndex)

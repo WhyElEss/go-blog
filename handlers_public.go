@@ -39,6 +39,35 @@ type pageBase struct {
 	Year    int
 	// Gallery loads the picture viewer: the page has images that open in it.
 	Gallery bool
+	// Canonical and Alternates tell search engines which address holds
+	// which language (see setLangURLs).
+	Canonical  string
+	Alternates []alternate
+}
+
+// alternate is a language version of a page: Lang is en, ru or x-default.
+type alternate struct{ Lang, URL string }
+
+// setLangURLs points search engines at the page's language versions. A
+// page in both languages has one address per language, ?lang=en and
+// ?lang=ru, plus the bare path as x-default, whose language follows the
+// reader: crawlers send no Accept-Language, so without these links they
+// would only ever see one language. A page in one language is canonical
+// at the bare path.
+func (b *pageBase) setLangURLs(r *http.Request, both bool) {
+	u := b.Origin + b.Path
+	b.Canonical, b.Alternates = u, nil
+	if !both {
+		return
+	}
+	if l := r.URL.Query().Get("lang"); l == "ru" || l == "en" {
+		b.Canonical = u + "?lang=" + l
+	}
+	b.Alternates = langAlternates(u)
+}
+
+func langAlternates(u string) []alternate {
+	return []alternate{{"en", u + "?lang=en"}, {"ru", u + "?lang=ru"}, {"x-default", u}}
 }
 
 func (a *App) pageBase(r *http.Request, title string) pageBase {
@@ -187,6 +216,8 @@ func (a *App) handleIndex(w http.ResponseWriter, r *http.Request) {
 		data.Heading = tagName
 	}
 	data.pageBase = a.pageBase(r, title)
+	// The list's own texts and the post titles come in both languages.
+	data.setLangURLs(r, true)
 	if n > 1 {
 		data.Title += " — " + tf(data.SiteLang, "page_n", n)
 	}
@@ -278,6 +309,7 @@ func (a *App) handlePost(w http.ResponseWriter, r *http.Request, slug string) {
 		return
 	}
 	data := postPage{pageBase: a.pageBase(r, "")}
+	data.setLangURLs(r, p.Translation != nil)
 	lang := data.SiteLang
 	v := p.text(lang)
 	h, err := a.md.render(v.Body)

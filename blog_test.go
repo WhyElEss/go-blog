@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -1265,5 +1266,77 @@ func TestStaticCache(t *testing.T) {
 		if w.Code != 200 || w.Header().Get("Cache-Control") != want {
 			t.Errorf("%s: %d %q, want %q", path, w.Code, w.Header().Get("Cache-Control"), want)
 		}
+	}
+}
+
+func TestLangURLsAndSitemap(t *testing.T) {
+	a := testApp(t)
+	now := time.Now()
+	day := 24 * time.Hour
+	a.store.update(func(d *Data) error {
+		d.Posts = append(d.Posts,
+			&Post{ID: "1", Slug: "both", Title: "Both", Body: "x", Lang: "en", PublishedAt: now.Add(-2 * day), UpdatedAt: now.Add(-2 * day),
+				Translation: &Translation{Title: "Оба", Body: "x"}},
+			&Post{ID: "2", Slug: "one", Title: "One", Body: "x", Lang: "en", PublishedAt: now.Add(-day), UpdatedAt: now.Add(-day)},
+			&Post{ID: "3", Slug: "draft", Title: "Draft", Body: "x", Lang: "en", Draft: true},
+			&Post{ID: "4", Slug: "later", Title: "Later", Body: "x", Lang: "en", PublishedAt: now.Add(day)},
+		)
+		return nil
+	})
+	const o = "https://blog.example.com"
+	alts := `<link rel="alternate" hreflang="en" href="` + o + `/both/?lang=en">` + "\n" +
+		`<link rel="alternate" hreflang="ru" href="` + o + `/both/?lang=ru">` + "\n" +
+		`<link rel="alternate" hreflang="x-default" href="` + o + `/both/">`
+	for path, want := range map[string][]string{
+		"/both/":          {`<link rel="canonical" href="` + o + `/both/">`, alts},
+		"/both/?lang=ru":  {`<link rel="canonical" href="` + o + `/both/?lang=ru">`, alts},
+		"/one/?lang=ru":   {`<link rel="canonical" href="` + o + `/one/">`},
+		"/":               {`<link rel="canonical" href="` + o + `/">`, `hreflang="ru" href="` + o + `/?lang=ru"`},
+		"/tag/x/?lang=en": nil, // no such tag: a 404 has no canonical
+	} {
+		b := do(t, a, httptest.NewRequest("GET", path, nil)).Body.String()
+		for _, s := range want {
+			if !strings.Contains(b, s) {
+				t.Errorf("%s: missing %s", path, s)
+			}
+		}
+		if want == nil && strings.Contains(b, `rel="canonical"`) {
+			t.Errorf("%s: canonical on a 404", path)
+		}
+		if path == "/one/?lang=ru" && strings.Contains(b, `hreflang="x-default"`) {
+			t.Errorf("%s: alternates on a post in one language", path)
+		}
+	}
+
+	b := do(t, a, httptest.NewRequest("GET", "/robots.txt", nil)).Body.String()
+	if !strings.Contains(b, "Sitemap: "+o+"/sitemap.xml") {
+		t.Errorf("robots.txt\n%s", b)
+	}
+	rec := do(t, a, httptest.NewRequest("GET", "/sitemap.xml", nil))
+	b = rec.Body.String()
+	if rec.Code != 200 || !strings.HasPrefix(rec.Header().Get("Content-Type"), "application/xml") {
+		t.Fatalf("sitemap %d %s", rec.Code, rec.Header().Get("Content-Type"))
+	}
+	for _, s := range []string{
+		"<url><loc>" + o + "/one/</loc><lastmod>" + now.Add(-day).UTC().Format("2006-01-02") + "</lastmod></url>",
+		"<url><loc>" + o + "/both/?lang=ru</loc>",
+		`<xhtml:link rel="alternate" hreflang="x-default" href="` + o + `/both/"/>`,
+		"<url><loc>" + o + "/?lang=en</loc>",
+	} {
+		if !strings.Contains(b, s) {
+			t.Errorf("sitemap missing %s", s)
+		}
+	}
+	for _, s := range []string{"/draft/", "/later/"} {
+		if strings.Contains(b, s) {
+			t.Errorf("sitemap lists %s", s)
+		}
+	}
+	if strings.Count(b, "<url>") != 7 { // home and both ×3, one
+		t.Errorf("sitemap has %d entries\n%s", strings.Count(b, "<url>"), b)
+	}
+	var x struct{}
+	if err := xml.Unmarshal([]byte(b), &x); err != nil {
+		t.Errorf("sitemap is not XML: %v", err)
 	}
 }
