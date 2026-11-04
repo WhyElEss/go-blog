@@ -1,7 +1,8 @@
-# Static Go binary on a small Alpine base. Builds natively for whatever
-# platform Docker targets — linux/arm64 on the Raspberry Pi.
+# Static Go binary on a small Alpine base. CI builds it for linux/arm64 (the
+# Raspberry Pi) and linux/amd64 (the standby) and publishes it to ghcr.io;
+# the Go stage runs on the build machine and cross-compiles.
 
-FROM golang:1.26-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -9,10 +10,12 @@ COPY *.go ./
 COPY templates ./templates
 COPY static ./static
 ARG VERSION=docker
+ARG TARGETOS TARGETARCH
 RUN go vet ./... && \
-    CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -trimpath -o /out/blog .
+    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "-s -w -X main.version=${VERSION}" -trimpath -o /out/blog .
 
 FROM alpine:3.21
+LABEL org.opencontainers.image.source=https://github.com/WhyElEss/go-blog
 # tzdata: TZ= for publication dates and logs.
 RUN apk add --no-cache tzdata
 COPY --from=build /out/blog /usr/local/bin/blog
