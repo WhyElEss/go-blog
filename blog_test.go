@@ -1340,3 +1340,16 @@ func TestLangURLsAndSitemap(t *testing.T) {
 		t.Errorf("sitemap is not XML: %v", err)
 	}
 }
+
+func TestReadInLink(t *testing.T) {
+	a := testApp(t)
+	a.store.update(func(d *Data) error {
+		d.Posts = append(d.Posts, &Post{ID: "1", Slug: "both", Title: "Both", Body: "x", Lang: "en", PublishedAt: time.Now().Add(-time.Hour),
+			Translation: &Translation{Title: "Оба", Body: "x"}})
+		return nil
+	})
+	b := do(t, a, httptest.NewRequest("GET", "/both/", nil)).Body.String()
+	if !strings.Contains(b, `<a class="read-in" href="/both/?lang=ru" hreflang="ru" lang="ru">`) {
+		t.Errorf("no read-in link\n%s", b)
+	}
+}

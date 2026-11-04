@@ -67,6 +67,9 @@ main.wrap { flex: 1; padding-top: 2.5rem; padding-bottom: 3rem; }
 }
 .meta { color: var(--muted); font-size: .9rem; margin: 0; }
 .meta a { color: var(--muted); }
+/* The other language's version: a reader who got the wrong language
+   should spot it among the date and tags. */
+.meta a.read-in { color: var(--text); font-weight: 600; }
 
 .pager { display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 1.25rem; }
 .pager a { color: var(--accent-ink); text-decoration: none; }
