@@ -119,13 +119,15 @@ docker compose up -d
 
 ## Running it
 
-The Raspberry Pi needs only Docker; the image is built from this repository.
+The host needs only Docker. CI publishes every commit on `main` as
+`ghcr.io/whyeless/go-blog:<7-char commit>` (and `:latest`) for linux/arm64
+and linux/amd64; `BLOG_TAG` in `.env` picks the version.
 
 ```bash
 mkdir ~/blog && cd ~/blog
 curl -O https://raw.githubusercontent.com/WhyElEss/go-blog/main/docker-compose.yml
 curl -o .env https://raw.githubusercontent.com/WhyElEss/go-blog/main/.env.example
-docker compose build
+docker compose pull
 docker compose run --rm -it blog hashpw   # paste the line into .env
 docker compose up -d
 ```
@@ -133,7 +135,9 @@ docker compose up -d
 Then open `http://<host>:8096/admin/`. Data lives in the `blog_data` volume:
 `blog.json` (posts, settings, image records), `session.key` and `images/`.
 
-To update: `docker compose build --no-cache && docker compose up -d`.
+To update: set `BLOG_TAG` in `.env` to the new commit, then
+`docker compose pull && docker compose up -d`. A local build still works:
+`docker build -t blog:local .`.
 
 ### Configuration (`.env`)
 

@@ -1,12 +1,11 @@
-# Lives on the host next to .env. The image is built straight from GitHub:
-#   docker compose build --no-cache && docker compose up -d
+# Lives on the host next to .env. CI publishes every commit on main as
+# ghcr.io/whyeless/go-blog:<7-char commit>; BLOG_TAG in .env picks one.
+# To update: set BLOG_TAG, then docker compose pull && docker compose up -d
 name: blog
 
 services:
   blog:
-    build:
-      context: https://github.com/WhyElEss/go-blog.git#main
-    image: blog:local
+    image: ghcr.io/whyeless/go-blog:${BLOG_TAG:?set BLOG_TAG in .env}
     container_name: blog
     restart: unless-stopped
     # format: raw — the password hash is read literally, never interpolated.

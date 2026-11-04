@@ -15,16 +15,18 @@
 #
 # Restore, with the blog stopped (docker compose stop blog):
 #   docker run --rm --user 0 -v blog_data:/data -v "$BACKUP_DIR:/b:ro" \
-#     --entrypoint sh blog:local -c 'cd /data && tar -xzf /b/<archive> --strip-components=1 data/'
+#     --entrypoint sh "$(docker inspect --format '{{.Config.Image}}' blog)" \
+#     -c 'cd /data && tar -xzf /b/<archive> --strip-components=1 data/'
 set -euo pipefail
 
 BLOG_DIR="${BLOG_DIR:-$HOME/blog}"            # docker-compose.yml and .env
 BACKUP_DIR="${BACKUP_DIR:-$HOME/blog-backups}"
 VOLUME="${VOLUME:-blog_data}"
-IMAGE="${IMAGE:-blog:local}"
+DOCKER="${DOCKER:-/usr/bin/docker}"
+# Any image with tar will do; the blog's own is already on the host.
+IMAGE="${IMAGE:-$($DOCKER inspect --format '{{.Config.Image}}' blog)}"
 KEEP="${KEEP:-10}"                             # newest archives kept
 LOG="${LOG:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/blog-backup.log}"
-DOCKER="${DOCKER:-/usr/bin/docker}"
 
 exec >> "$LOG" 2>&1
 echo "=== $(date "+%Y-%m-%d %H:%M:%S") start ==="
