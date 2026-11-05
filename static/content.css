@@ -94,6 +94,102 @@
   .content .fig-left, .content .fig-right { float: none; width: auto; margin: 1.5em 0; }
 }
 
+/* Galleries ([gallery] in markdown.go): the blog splits the pictures
+   into rows (galleryRows). In a row, a tile gr-N has the proportions N/20
+   (width over height) and the share N of the width, so all the tiles in it
+   are one height. A short last row ends in an empty .gfill tile. --n is
+   N for the phone layout below. */
+.content .gallery { display: flex; flex-direction: column; gap: 6px; clear: both; margin: 1.75em 0; }
+.content .grow { display: flex; gap: 6px; }
+.content .gi { min-width: 0; overflow: hidden; border-radius: 4px; background: var(--soft); }
+.content .gi a.zoom, .content .gi img { display: block; width: 100%; height: 100%; }
+.content .gi img { object-fit: cover; }
+/* Phones: the rows made for 720 px would be 60-90 px tall, so the tiles
+   wrap by themselves instead, about 110 px tall, and fill each line. */
+@media (max-width: 559px) {
+  .content .gallery { flex-direction: row; flex-wrap: wrap; gap: 3px; }
+  .content .grow { display: contents; }
+  .content .gallery .gi { flex-basis: calc(var(--n) * 5.5px); }
+  .content .gfill { display: none; }
+  .content .gallery::after { content: ""; flex: 1000 1 0; }
+}
+.content .gr-5 { --n: 5; flex: 5 1 0; aspect-ratio: 5 / 20; }
+.content .gr-6 { --n: 6; flex: 6 1 0; aspect-ratio: 6 / 20; }
+.content .gr-7 { --n: 7; flex: 7 1 0; aspect-ratio: 7 / 20; }
+.content .gr-8 { --n: 8; flex: 8 1 0; aspect-ratio: 8 / 20; }
+.content .gr-9 { --n: 9; flex: 9 1 0; aspect-ratio: 9 / 20; }
+.content .gr-10 { --n: 10; flex: 10 1 0; aspect-ratio: 10 / 20; }
+.content .gr-11 { --n: 11; flex: 11 1 0; aspect-ratio: 11 / 20; }
+.content .gr-12 { --n: 12; flex: 12 1 0; aspect-ratio: 12 / 20; }
+.content .gr-13 { --n: 13; flex: 13 1 0; aspect-ratio: 13 / 20; }
+.content .gr-14 { --n: 14; flex: 14 1 0; aspect-ratio: 14 / 20; }
+.content .gr-15 { --n: 15; flex: 15 1 0; aspect-ratio: 15 / 20; }
+.content .gr-16 { --n: 16; flex: 16 1 0; aspect-ratio: 16 / 20; }
+.content .gr-17 { --n: 17; flex: 17 1 0; aspect-ratio: 17 / 20; }
+.content .gr-18 { --n: 18; flex: 18 1 0; aspect-ratio: 18 / 20; }
+.content .gr-19 { --n: 19; flex: 19 1 0; aspect-ratio: 19 / 20; }
+.content .gr-20 { --n: 20; flex: 20 1 0; aspect-ratio: 20 / 20; }
+.content .gr-21 { --n: 21; flex: 21 1 0; aspect-ratio: 21 / 20; }
+.content .gr-22 { --n: 22; flex: 22 1 0; aspect-ratio: 22 / 20; }
+.content .gr-23 { --n: 23; flex: 23 1 0; aspect-ratio: 23 / 20; }
+.content .gr-24 { --n: 24; flex: 24 1 0; aspect-ratio: 24 / 20; }
+.content .gr-25 { --n: 25; flex: 25 1 0; aspect-ratio: 25 / 20; }
+.content .gr-26 { --n: 26; flex: 26 1 0; aspect-ratio: 26 / 20; }
+.content .gr-27 { --n: 27; flex: 27 1 0; aspect-ratio: 27 / 20; }
+.content .gr-28 { --n: 28; flex: 28 1 0; aspect-ratio: 28 / 20; }
+.content .gr-29 { --n: 29; flex: 29 1 0; aspect-ratio: 29 / 20; }
+.content .gr-30 { --n: 30; flex: 30 1 0; aspect-ratio: 30 / 20; }
+.content .gr-31 { --n: 31; flex: 31 1 0; aspect-ratio: 31 / 20; }
+.content .gr-32 { --n: 32; flex: 32 1 0; aspect-ratio: 32 / 20; }
+.content .gr-33 { --n: 33; flex: 33 1 0; aspect-ratio: 33 / 20; }
+.content .gr-34 { --n: 34; flex: 34 1 0; aspect-ratio: 34 / 20; }
+.content .gr-35 { --n: 35; flex: 35 1 0; aspect-ratio: 35 / 20; }
+.content .gr-36 { --n: 36; flex: 36 1 0; aspect-ratio: 36 / 20; }
+.content .gr-37 { --n: 37; flex: 37 1 0; aspect-ratio: 37 / 20; }
+.content .gr-38 { --n: 38; flex: 38 1 0; aspect-ratio: 38 / 20; }
+.content .gr-39 { --n: 39; flex: 39 1 0; aspect-ratio: 39 / 20; }
+.content .gr-40 { --n: 40; flex: 40 1 0; aspect-ratio: 40 / 20; }
+.content .gr-41 { --n: 41; flex: 41 1 0; aspect-ratio: 41 / 20; }
+.content .gr-42 { --n: 42; flex: 42 1 0; aspect-ratio: 42 / 20; }
+.content .gr-43 { --n: 43; flex: 43 1 0; aspect-ratio: 43 / 20; }
+.content .gr-44 { --n: 44; flex: 44 1 0; aspect-ratio: 44 / 20; }
+.content .gr-45 { --n: 45; flex: 45 1 0; aspect-ratio: 45 / 20; }
+.content .gr-46 { --n: 46; flex: 46 1 0; aspect-ratio: 46 / 20; }
+.content .gr-47 { --n: 47; flex: 47 1 0; aspect-ratio: 47 / 20; }
+.content .gr-48 { --n: 48; flex: 48 1 0; aspect-ratio: 48 / 20; }
+.content .gr-49 { --n: 49; flex: 49 1 0; aspect-ratio: 49 / 20; }
+.content .gr-50 { --n: 50; flex: 50 1 0; aspect-ratio: 50 / 20; }
+.content .gr-51 { --n: 51; flex: 51 1 0; aspect-ratio: 51 / 20; }
+.content .gr-52 { --n: 52; flex: 52 1 0; aspect-ratio: 52 / 20; }
+.content .gr-53 { --n: 53; flex: 53 1 0; aspect-ratio: 53 / 20; }
+.content .gr-54 { --n: 54; flex: 54 1 0; aspect-ratio: 54 / 20; }
+.content .gr-55 { --n: 55; flex: 55 1 0; aspect-ratio: 55 / 20; }
+.content .gr-56 { --n: 56; flex: 56 1 0; aspect-ratio: 56 / 20; }
+.content .gr-57 { --n: 57; flex: 57 1 0; aspect-ratio: 57 / 20; }
+.content .gr-58 { --n: 58; flex: 58 1 0; aspect-ratio: 58 / 20; }
+.content .gr-59 { --n: 59; flex: 59 1 0; aspect-ratio: 59 / 20; }
+.content .gr-60 { --n: 60; flex: 60 1 0; aspect-ratio: 60 / 20; }
+.content .gr-61 { --n: 61; flex: 61 1 0; aspect-ratio: 61 / 20; }
+.content .gr-62 { --n: 62; flex: 62 1 0; aspect-ratio: 62 / 20; }
+.content .gr-63 { --n: 63; flex: 63 1 0; aspect-ratio: 63 / 20; }
+.content .gr-64 { --n: 64; flex: 64 1 0; aspect-ratio: 64 / 20; }
+.content .gr-65 { --n: 65; flex: 65 1 0; aspect-ratio: 65 / 20; }
+.content .gr-66 { --n: 66; flex: 66 1 0; aspect-ratio: 66 / 20; }
+.content .gr-67 { --n: 67; flex: 67 1 0; aspect-ratio: 67 / 20; }
+.content .gr-68 { --n: 68; flex: 68 1 0; aspect-ratio: 68 / 20; }
+.content .gr-69 { --n: 69; flex: 69 1 0; aspect-ratio: 69 / 20; }
+.content .gr-70 { --n: 70; flex: 70 1 0; aspect-ratio: 70 / 20; }
+.content .gr-71 { --n: 71; flex: 71 1 0; aspect-ratio: 71 / 20; }
+.content .gr-72 { --n: 72; flex: 72 1 0; aspect-ratio: 72 / 20; }
+.content .gr-73 { --n: 73; flex: 73 1 0; aspect-ratio: 73 / 20; }
+.content .gr-74 { --n: 74; flex: 74 1 0; aspect-ratio: 74 / 20; }
+.content .gr-75 { --n: 75; flex: 75 1 0; aspect-ratio: 75 / 20; }
+.content .gr-76 { --n: 76; flex: 76 1 0; aspect-ratio: 76 / 20; }
+.content .gr-77 { --n: 77; flex: 77 1 0; aspect-ratio: 77 / 20; }
+.content .gr-78 { --n: 78; flex: 78 1 0; aspect-ratio: 78 / 20; }
+.content .gr-79 { --n: 79; flex: 79 1 0; aspect-ratio: 79 / 20; }
+.content .gr-80 { --n: 80; flex: 80 1 0; aspect-ratio: 80 / 20; }
+
 .content .embed { position: relative; aspect-ratio: 16 / 9; clear: both; margin: 1.75em 0; }
 .content .embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: 6px; }
 /* Apple Music: a fixed height, as in Apple's embed code (450 px for an

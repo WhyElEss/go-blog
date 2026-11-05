@@ -20,6 +20,9 @@ renders a page in a few milliseconds.
   JPEG) and SVG.
 - **Image placement** next to the text: left, right or centre, with an
   optional caption. Floats turn into full-width images on phones.
+- **Image rows**: several pictures under `[gallery]` are laid out in rows
+  of one height, each tile as wide as its picture's proportions ask. The
+  editor's Gallery button uploads a batch of files and inserts the block.
 - **Gallery**: a click on a post's picture, cover included, opens it full
   screen to page through all of the post's pictures, using
   [PhotoSwipe](https://photoswipe.com) 5.4.4 (MIT, kept in
@@ -68,6 +71,11 @@ This paragraph flows around the image on the right.
 This one flows around the image on the left. Without a fragment, or with
 #center, an image spans the text column.
 
+[gallery]
+![](/img/2026/10/lake.jpg)
+![](/img/2026/10/lion.jpg)
+![](/img/2026/10/stairs.jpg)
+
 [TOC]
 
 ==Highlighted== text, ~~struck~~ text and a footnote.[^1]
@@ -80,7 +88,9 @@ https://www.youtube.com/watch?v=gYc5zrXC52k
 ```
 
 `[TOC]` alone on its line lists the H2–H4 headings after it, nested and
-linked to their anchors. An image becomes a figure only when it is alone in its paragraph. Raw HTML
+linked to their anchors. `[gallery]` on its own line, with only images on
+the lines right under it, makes those images a gallery; a blank line ends
+it. An image becomes a figure only when it is alone in its paragraph. Raw HTML
 passes through: only the admin writes posts.
 
 ## English and Russian

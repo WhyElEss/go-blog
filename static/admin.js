@@ -270,6 +270,34 @@
     })
   );
 
+  // Gallery: several files at once, uploaded one after another, then
+  // [gallery] with an image per line (markdown.go). A failed upload stops
+  // the rest, so its error stays in view; the ones uploaded go in.
+  const galleryInput = $("#gallery-files");
+  const galleryButton = $("[data-gallery]");
+  if (galleryButton && galleryInput) {
+    galleryButton.addEventListener("click", () => {
+      const s = body.selectionStart, e = body.selectionEnd;
+      galleryInput.value = "";
+      galleryInput.onchange = async () => {
+        const files = Array.from(galleryInput.files || []);
+        if (!files.length) return;
+        const urls = [];
+        for (const f of files) {
+          try {
+            urls.push((await upload(f)).url);
+          } catch {
+            break;
+          }
+        }
+        if (!urls.length) return;
+        body.setSelectionRange(s, e);
+        insertBlock("[gallery]\n" + urls.map((u) => "![](" + u + ")").join("\n"));
+      };
+      galleryInput.click();
+    });
+  }
+
   bodies.forEach((b) => {
     b.addEventListener("paste", (e) => {
       const files = Array.from(e.clipboardData.files || []).filter((f) => f.type.startsWith("image/"));

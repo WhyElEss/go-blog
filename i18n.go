@@ -146,6 +146,8 @@ var messages = map[string][2]string{
 	"tb_toc":           {"Оглавление: [TOC] — список заголовков ниже, со ссылками", "Contents: [TOC] lists the headings below it, linked"},
 	"tb_toc_label":     {"Оглавление", "Contents"},
 	"tb_image":         {"Картинка:", "Image:"},
+	"tb_gallery":       {"Галерея: несколько картинок рядами", "Gallery: several images in rows"},
+	"tb_gallery_label": {"Галерея", "Gallery"},
 	"tb_youtube":       {"Видео YouTube", "YouTube video"},
 	"tb_music":         {"Альбом, плейлист или песня Apple Music", "Apple Music album, playlist or song"},
 	"tb_music_url":     {"Ссылка на альбом, плейлист или песню в Apple Music", "Apple Music album, playlist or song link"},

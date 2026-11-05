@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -110,6 +111,117 @@ func TestMarkdownFigures(t *testing.T) {
 	h, _ = md.render("Inline ![icon](/img/i.png) in text.\n")
 	if strings.Contains(h, "<figure") || !strings.Contains(h, `<img src="/img/i.png" alt="icon"`) {
 		t.Errorf("inline image:\n%s", h)
+	}
+}
+
+func TestMarkdownGallery(t *testing.T) {
+	md := newMarkdown(func(key string) (Image, bool) {
+		switch key {
+		case "w.jpg":
+			return Image{Key: key, Width: 2000, Height: 1000, Widths: []int{600, 2000}}, true
+		case "t.jpg":
+			return Image{Key: key, Width: 600, Height: 900, Widths: []int{600}}, true
+		case "pano.jpg":
+			return Image{Key: key, Width: 9000, Height: 1000, Widths: []int{9000}}, true
+		}
+		return Image{}, false
+	}, "")
+	h, err := md.render("Before.\n\n[gallery]\n![Wide](/img/w.jpg)\n![Tall](/img/t.jpg#left \"Tip\")\n![](/img/pano.jpg)\n![](/img/other.png)\n\nAfter.\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`<p>Before.</p>`,
+		`<div class="gallery"><div class="grow"><div class="gi gr-40"><a class="zoom" href="/img/w.jpg" data-pswp-width="2000" data-pswp-height="1000"`,
+		`alt="Wide"`,
+		// 600x900 is 2:3; the #left placement means nothing in a gallery.
+		`<div class="gi gr-13"><a class="zoom" href="/img/t.jpg"`,
+		`title="Tip"`,
+		// 9:1 is wider than the widest tile, 4:1.
+		`<div class="gi gr-80">`,
+		// Not an upload: 3:2, and no zoom link.
+		`<div class="gi gr-30"><img src="/img/other.png"`,
+		`<p>After.</p>`,
+	} {
+		if !strings.Contains(h, want) {
+			t.Errorf("missing %q in\n%s", want, h)
+		}
+	}
+	if strings.Contains(h, "[gallery]") || strings.Contains(h, "<figure") || strings.Contains(h, "<p><div") {
+		t.Errorf("gallery not made:\n%s", h)
+	}
+
+	// A lone tall picture keeps the row height; an empty tile takes the
+	// rest of the row: (720 - 6) * 20 / 180 = 79 shares, 13 of them its own.
+	h, _ = md.render("[gallery]\n![](/img/t.jpg)\n")
+	if !strings.Contains(h, `<div class="gi gr-13">`) || !strings.Contains(h, `<span class="gfill gr-66"></span>`) {
+		t.Errorf("short last row:\n%s", h)
+	}
+
+	// Not galleries: the mark alone, the mark after other text, text among
+	// the images, and the images after a blank line.
+	for _, src := range []string{
+		"[gallery]\n",
+		"Look:\n[gallery]\n![](/img/w.jpg)\n",
+		"[gallery]\n![](/img/w.jpg)\nand text\n",
+		"[gallery]\n\n![](/img/w.jpg)\n",
+	} {
+		h, _ := md.render(src)
+		if strings.Contains(h, `class="gallery"`) {
+			t.Errorf("gallery from %q:\n%s", src, h)
+		}
+	}
+}
+
+func TestGalleryRows(t *testing.T) {
+	for _, c := range []struct {
+		n    []int
+		want []int
+	}{
+		// One wide picture: a row of its own, short of the aim's height.
+		{[]int{80}, []int{0}},
+		// Four 3:2 pictures: one row (117 px) rather than three and a lone one.
+		{[]int{30, 30, 30, 30}, []int{0}},
+		// Five: three (157 px) and two (180 px, most of the width).
+		{[]int{30, 30, 30, 30, 30}, []int{0, 3}},
+		// The case that made a lone 3:2 tile 480 px tall with flex-wrap:
+		// square, 16:9, 2.35:1, square, 3:2, 2.85:1, 1.2:1, 1.55:1.
+		{[]int{20, 36, 47, 20, 30, 57, 24, 31}, nil},
+	} {
+		got := galleryRows(c.n)
+		if c.want != nil && !slices.Equal(got, c.want) {
+			t.Errorf("galleryRows(%v) = %v, want %v", c.n, got, c.want)
+		}
+		// No row other than the last is more than half as tall again as
+		// the aim, or under half of it.
+		for k, i := range got {
+			j := len(c.n)
+			if k+1 < len(got) {
+				j = got[k+1]
+			}
+			sum := 0
+			for _, v := range c.n[i:j] {
+				sum += v
+			}
+			h := float64(galleryWidth-galleryGap*(j-i-1)) * 20 / float64(sum)
+			if j < len(c.n) && (h > galleryRowHeight*1.5 || h < galleryRowHeight/2) {
+				t.Errorf("galleryRows(%v): row %v is %.0f px tall", c.n, c.n[i:j], h)
+			}
+		}
+	}
+}
+
+// Every proportion a gallery tile can get has its rule in content.css.
+func TestGalleryCSS(t *testing.T) {
+	css, err := os.ReadFile("static/content.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for n := galleryRatioMin; n <= galleryRatioMax; n++ {
+		want := fmt.Sprintf(".content .gr-%d { --n: %d; flex: %d 1 0; aspect-ratio: %d / 20; }", n, n, n, n)
+		if !strings.Contains(string(css), want) {
+			t.Errorf("content.css lacks %q", want)
+		}
 	}
 }
 

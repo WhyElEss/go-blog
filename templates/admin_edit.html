@@ -44,11 +44,13 @@
     <button type="button" data-img="left" title="{{t .Lang "img_left"}}" aria-label="{{t .Lang "img_left"}}">◧</button>
     <button type="button" data-img="center" title="{{t .Lang "img_center"}}" aria-label="{{t .Lang "img_center"}}">▣</button>
     <button type="button" data-img="right" title="{{t .Lang "img_right"}}" aria-label="{{t .Lang "img_right"}}">◨</button>
+    <button type="button" data-gallery title="{{t .Lang "tb_gallery"}}" aria-label="{{t .Lang "tb_gallery"}}">{{t .Lang "tb_gallery_label"}}</button>
     <button type="button" data-md="youtube" title="{{t .Lang "tb_youtube"}}" aria-label="{{t .Lang "tb_youtube"}}">▶ YouTube</button>
     <button type="button" data-md="music" title="{{t .Lang "tb_music"}}" aria-label="{{t .Lang "tb_music"}}">♫ Apple Music</button>
     <span class="status" id="upload-status" data-uploading="{{t .Lang "uploading"}}" data-failed="{{t .Lang "upload_failed"}}"></span>
   </div>
   <input type="file" id="img-file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" hidden>
+  <input type="file" id="gallery-files" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" multiple hidden>
 
   <div class="split">
     <div class="bodies">
