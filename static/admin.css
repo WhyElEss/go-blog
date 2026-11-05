@@ -60,6 +60,12 @@ table.list td a:first-child { color: var(--text); text-decoration: none; font-we
 
 input, textarea, select { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: .5rem .65rem; width: 100%; }
 textarea { resize: vertical; }
+/* iOS Safari draws a date field with a minimum width of its own and ignores
+   width: 100%, so on a phone it ran past the screen edge. Without the native
+   look it takes the column's width; min-height keeps an empty one as tall as
+   the other fields. Tapping it still opens the system picker. */
+input[type="datetime-local"] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; min-height: calc(1.5em + 1rem + 2px); text-align: left; }
+.fields label { min-width: 0; }
 input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
 label { display: flex; flex-direction: column; gap: .3rem; font-size: .9rem; color: var(--muted); }
 label.check { flex-direction: row; align-items: center; gap: .5rem; color: var(--text); }
