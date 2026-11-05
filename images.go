@@ -22,10 +22,11 @@ import (
 )
 
 // Uploads are re-encoded, which also drops their metadata (camera, GPS).
-// The largest copy is at most maxImageWidth wide; smaller copies for the
-// srcset are made at the widths below it.
+// The largest copy is at most maxImageSide on its longer side, so a phone
+// screenshot is as heavy as a landscape photo; smaller copies for the
+// srcset are made at the widths below its width.
 const (
-	maxImageWidth  = 2000
+	maxImageSide   = 2000
 	maxImagePixels = 60_000_000 // decoding needs 4 bytes per pixel
 	jpegQuality    = 84
 )
@@ -113,8 +114,12 @@ func processImage(dir, name string, data []byte, taken time.Time, exists func(ke
 	if orient >= 5 {
 		ow, oh = oh, ow
 	}
-	fw := min(ow, maxImageWidth)
-	fh := max(1, (oh*fw+ow/2)/ow)
+	fw, fh := ow, oh
+	if ow >= oh && ow > maxImageSide {
+		fw, fh = maxImageSide, max(1, (oh*maxImageSide+ow/2)/ow)
+	} else if oh > ow && oh > maxImageSide {
+		fw, fh = max(1, (ow*maxImageSide+oh/2)/oh), maxImageSide
+	}
 	sw, sh := fw, fh
 	if orient >= 5 {
 		sw, sh = fh, fw

@@ -97,21 +97,29 @@
 /* Galleries ([gallery] in markdown.go): the blog splits the pictures
    into rows (galleryRows). In a row, a tile gr-N has the proportions N/20
    (width over height) and the share N of the width, so all the tiles in it
-   are one height. A short last row ends in an empty .gfill tile. --n is
-   N for the phone layout below. */
+   are one height. A short last row (.short) keeps tiles N * 9 px wide,
+   180 px tall, and stands centred. --n is N for these widths. */
 .content .gallery { display: flex; flex-direction: column; gap: 6px; clear: both; margin: 1.75em 0; }
 .content .grow { display: flex; gap: 6px; }
 .content .gi { min-width: 0; overflow: hidden; border-radius: 4px; background: var(--soft); }
 .content .gi a.zoom, .content .gi img { display: block; width: 100%; height: 100%; }
 .content .gi img { object-fit: cover; }
+@media (min-width: 560px) {
+  .content .grow.short { justify-content: center; }
+  .content .grow.short .gi { flex: 0 1 calc(var(--n) * 9px); }
+}
 /* Phones: the rows made for 720 px would be 60-90 px tall, so the tiles
    wrap by themselves instead, about 110 px tall, and fill each line. */
 @media (max-width: 559px) {
   .content .gallery { flex-direction: row; flex-wrap: wrap; gap: 3px; }
   .content .grow { display: contents; }
   .content .gallery .gi { flex-basis: calc(var(--n) * 5.5px); }
-  .content .gfill { display: none; }
   .content .gallery::after { content: ""; flex: 1000 1 0; }
+  /* A gallery of one short row (two or three pictures) stays a centred
+     row, as on a wide screen, shrunk to fit if it has to. */
+  .content .gallery > .grow.short:only-child { display: flex; flex: 1 1 100%; justify-content: center; }
+  .content .gallery > .grow.short:only-child .gi { flex: 0 1 calc(var(--n) * 9px); }
+  .content .gallery:has(> .grow.short:only-child)::after { content: none; }
 }
 .content .gr-5 { --n: 5; flex: 5 1 0; aspect-ratio: 5 / 20; }
 .content .gr-6 { --n: 6; flex: 6 1 0; aspect-ratio: 6 / 20; }

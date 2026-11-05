@@ -405,7 +405,7 @@ func galleryRatio(im Image, known bool) int {
 // that the rows' heights at the column's width come as close as they can
 // to galleryRowHeight (least squares over all rows). The last row may stay
 // short of the width rather than grow taller than that, at a cost for the
-// empty room. It returns the
+// empty room; it is then centred. It returns the
 // index where each row starts.
 func galleryRows(n []int) []int {
 	height := func(i, j int) float64 { // tiles i..j-1 across the column
@@ -465,29 +465,32 @@ func (r *imageRenderer) renderGallery(w util.BufWriter, src []byte, node ast.Nod
 		for _, v := range ratios[i:j] {
 			sum += v
 		}
-		// A last row that would be taller than the aim keeps that height:
-		// an empty tile takes the rest of the width.
-		fill := 0
+		// A last row that would be taller than the aim keeps that height
+		// and stands centred, short of the width (content.css: .short).
+		short := false
 		if j == len(ratios) {
-			full := int(math.Round(float64(galleryWidth-galleryGap*(j-i)) * 20 / galleryRowHeight))
-			if full > sum {
-				fill = full - sum
-			}
+			full := int(math.Round(float64(galleryWidth-galleryGap*(j-i-1)) * 20 / galleryRowHeight))
+			short = full > sum
 		}
-		w.WriteString(`<div class="grow">`)
+		if short {
+			w.WriteString(`<div class="grow short">`)
+		} else {
+			w.WriteString(`<div class="grow">`)
+		}
 		for x := i; x < j; x++ {
 			it := n.items[x]
 			// The tile's width, for srcset: its share of the column on a
-			// wide screen; on a phone (content.css) N * 5.5 px, grown by up
-			// to about half to fill its line, out of about 375.
-			px := int(math.Ceil(float64(ratios[x]) / float64(sum+fill) * galleryWidth))
+			// wide screen (in a short row, N/20 of the row height); on a
+			// phone (content.css) N * 5.5 px, grown by up to about half to
+			// fill its line, out of about 375.
+			px := int(math.Ceil(float64(ratios[x]) / float64(sum) * galleryWidth))
+			if short {
+				px = ratios[x] * galleryRowHeight / 20
+			}
 			vw := min(100, int(math.Ceil(float64(ratios[x])*2.2)))
 			fmt.Fprintf(w, `<div class="gi gr-%d">`, ratios[x])
 			r.writeImg(w, it.src, it.alt, it.title, fmt.Sprintf("(min-width: 760px) %dpx, %dvw", px, vw), true)
 			w.WriteString("</div>")
-		}
-		if fill > 0 {
-			fmt.Fprintf(w, `<span class="gfill gr-%d"></span>`, min(fill, galleryRatioMax))
 		}
 		w.WriteString("</div>")
 	}

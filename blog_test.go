@@ -120,7 +120,7 @@ func TestMarkdownGallery(t *testing.T) {
 		case "w.jpg":
 			return Image{Key: key, Width: 2000, Height: 1000, Widths: []int{600, 2000}}, true
 		case "t.jpg":
-			return Image{Key: key, Width: 600, Height: 900, Widths: []int{600}}, true
+			return Image{Key: key, Width: 600, Height: 900, Widths: []int{400, 600}}, true
 		case "pano.jpg":
 			return Image{Key: key, Width: 9000, Height: 1000, Widths: []int{9000}}, true
 		}
@@ -151,11 +151,16 @@ func TestMarkdownGallery(t *testing.T) {
 		t.Errorf("gallery not made:\n%s", h)
 	}
 
-	// A lone tall picture keeps the row height; an empty tile takes the
-	// rest of the row: (720 - 6) * 20 / 180 = 79 shares, 13 of them its own.
-	h, _ = md.render("[gallery]\n![](/img/t.jpg)\n")
-	if !strings.Contains(h, `<div class="gi gr-13">`) || !strings.Contains(h, `<span class="gfill gr-66"></span>`) {
+	// Two tall pictures (two 13/20 shares, 720 * 20 / 180 = 80 would fill
+	// the row) keep the row height and stand centred, 13 * 9 = 117 px wide.
+	h, _ = md.render("[gallery]\n![](/img/t.jpg)\n![](/img/t.jpg)\n")
+	if !strings.Contains(h, `<div class="gallery"><div class="grow short"><div class="gi gr-13">`) || !strings.Contains(h, `sizes="(min-width: 760px) 117px, 29vw"`) {
 		t.Errorf("short last row:\n%s", h)
+	}
+	// A full row is not short.
+	h, _ = md.render("[gallery]\n![](/img/w.jpg)\n![](/img/w.jpg)\n")
+	if strings.Contains(h, "short") {
+		t.Errorf("full row marked short:\n%s", h)
 	}
 
 	// Not galleries: the mark alone, the mark after other text, text among
@@ -417,6 +422,25 @@ func TestProcessImage(t *testing.T) {
 	}
 	if r, _, b, _ := got.At(350, 50).RGBA(); r < b {
 		t.Errorf("top-right should be red after rotation, got r=%d b=%d", r>>8, b>>8)
+	}
+
+	// A tall picture is limited by its height: a 1206×2622 phone
+	// screenshot becomes 920×2000, with a 600 px copy.
+	im, err = processImage(dir, "screenshot.jpg", encodeJPEG(t, 1206, 2622, 0), when, none)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if im.Width != 920 || im.Height != 2000 || !slices.Equal(im.Widths, []int{600, 920}) {
+		t.Errorf("tall: %+v", im)
+	}
+	if f, err := os.Open(filepath.Join(dir, filepath.FromSlash(im.Key))); err != nil {
+		t.Error(err)
+	} else {
+		cfg, _, err := image.DecodeConfig(f)
+		f.Close()
+		if err != nil || cfg.Width != 920 || cfg.Height != 2000 {
+			t.Errorf("tall file is %dx%d (%v)", cfg.Width, cfg.Height, err)
+		}
 	}
 
 	// Transparent PNG stays PNG; small images get no extra copies.

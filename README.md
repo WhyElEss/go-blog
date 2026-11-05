@@ -14,8 +14,9 @@ renders a page in a few milliseconds.
   warning about unsaved changes.
 - **Images**: upload from the toolbar, paste from the clipboard or drop onto
   the text. Every upload is decoded, turned upright from its EXIF
-  orientation, scaled to at most 2000 px wide, saved with 600/1000/1400 px
-  copies for `srcset`, and stripped of metadata (camera, GPS). JPEG, PNG
+  orientation, scaled to at most 2000 px on the longer side, saved with
+  600/1000/1400 px wide copies for `srcset`, and stripped of metadata
+  (camera, GPS). JPEG, PNG
   (transparency kept), GIF (kept as is, animation included), WebP (saved as
   JPEG) and SVG.
 - **Image placement** next to the text: left, right or centre, with an
