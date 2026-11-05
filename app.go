@@ -223,8 +223,8 @@ func (a *App) origin(r *http.Request) string {
 	return scheme + "://" + r.Host
 }
 
-// handleImage serves uploads. Names never change once written, so they
-// may be cached for a year.
+// handleImage serves uploads. A file never changes under its name, so it
+// may be cached for a year; a renamed one redirects to its new name.
 func (a *App) handleImage(w http.ResponseWriter, r *http.Request) {
 	p := path.Clean("/" + r.PathValue("path"))
 	if strings.Contains(p, "..") || strings.HasSuffix(p, ".tmp") {
@@ -233,7 +233,14 @@ func (a *App) handleImage(w http.ResponseWriter, r *http.Request) {
 	}
 	f := filepath.Join(a.imagesDir, filepath.FromSlash(p))
 	if st, err := os.Stat(f); err != nil || st.IsDir() {
-		http.NotFound(w, r)
+		// A picture renamed after its post (blog rename-images).
+		var to string
+		a.store.view(func(d *Data) { to = d.movedImage(strings.TrimPrefix(p, "/")) })
+		if to == "" {
+			http.NotFound(w, r)
+			return
+		}
+		http.Redirect(w, r, "/img/"+to, http.StatusMovedPermanently)
 		return
 	}
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")

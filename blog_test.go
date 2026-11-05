@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -904,7 +905,7 @@ func TestBlueskySyndication(t *testing.T) {
 	// A cover to send as the card's picture.
 	var buf bytes.Buffer
 	jpeg.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 1600, 900)), nil)
-	im, err := a.addImage("cover.jpg", buf.Bytes(), time.Now())
+	im, err := a.addImage("cover.jpg", false, buf.Bytes(), time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1488,4 +1489,142 @@ func TestReadInLink(t *testing.T) {
 	if !strings.Contains(b, `<a class="read-in" href="/both/?lang=ru" hreflang="ru" lang="ru">`) {
 		t.Errorf("no read-in link\n%s", b)
 	}
+}
+
+func TestUploadNumbered(t *testing.T) {
+	a := testApp(t)
+	up := func(name string, numbered bool) string {
+		var buf bytes.Buffer
+		mw := multipart.NewWriter(&buf)
+		mw.WriteField("name", name)
+		if numbered {
+			mw.WriteField("numbered", "1")
+		}
+		fw, _ := mw.CreateFormFile("file", "IMG_1234.PNG")
+		fw.Write(encodeJPEG(t, 800, 600, 0))
+		mw.Close()
+		req := httptest.NewRequest("POST", "/admin/upload", &buf)
+		req.Header.Set("Content-Type", mw.FormDataContentType())
+		req.AddCookie(adminCookieFor(a))
+		rec := do(t, a, req)
+		var res struct{ URL string }
+		json.Unmarshal(rec.Body.Bytes(), &res)
+		if rec.Code != 200 {
+			t.Fatalf("upload: %d %s", rec.Code, rec.Body)
+		}
+		return path.Base(res.URL)
+	}
+	for i, want := range []string{"halloween-candies-01.jpg", "halloween-candies-02.jpg", "halloween-candies-03.jpg"} {
+		if got := up("halloween-candies", true); got != want {
+			t.Errorf("upload %d: %s, want %s", i+1, got, want)
+		}
+	}
+	if got := up("Halloween Candies", true); got != "halloween-candies-04.jpg" {
+		t.Errorf("title as name: %s", got)
+	}
+	if got := up("halloween-candies-cover", false); got != "halloween-candies-cover.jpg" {
+		t.Errorf("cover: %s", got)
+	}
+	if got := up("halloween", true); got != "halloween-01.jpg" {
+		t.Errorf("other post: %s", got)
+	}
+}
+
+func TestNextNumbered(t *testing.T) {
+	d := &Data{Images: map[string]*Image{}}
+	for _, k := range []string{"2025/11/x-01.jpg", "2026/01/x-07.png", "2026/01/x-cover.jpg", "2026/01/x-1e3.jpg", "2026/01/xy-09.jpg", "2026/01/x-2.jpg"} {
+		d.Images[k] = &Image{Key: k}
+	}
+	if got := d.nextNumbered("x"); got != "x-08" {
+		t.Errorf("got %s", got)
+	}
+	if got := d.nextNumbered("y"); got != "y-01" {
+		t.Errorf("got %s", got)
+	}
+}
+
+func TestRenameImages(t *testing.T) {
+	a := testApp(t)
+	add := func(name string) string {
+		im, err := a.addImage(name, false, encodeJPEG(t, 1600, 900, 0), time.Date(2025, 11, 3, 0, 0, 0, 0, time.UTC))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return "/img/" + im.Key
+	}
+	cover, one, two, logo := add("Featured.jpg"), add("IMG_0400.PNG"), add("turntable_1.jpg"), add("logo.png")
+	a.store.update(func(d *Data) error {
+		d.Redirects = map[string]string{"/content/images/2025/11/IMG_0400.PNG": strings.TrimPrefix(one, "/img/")}
+		d.Settings.Logo = logo
+		d.Posts = append(d.Posts, &Post{ID: "1", Slug: "turntables", Cover: cover, CreatedAt: time.Now(),
+			Body:        "![](" + two + "#left \"A\")\n\nText ![](" + one + ") and again " + one + ".",
+			Translation: &Translation{Title: "T", Body: "[gallery]\n![](" + one + ")\n![](" + two + ")"}})
+		return nil
+	})
+	var plan []imageRename
+	a.store.view(func(d *Data) {
+		var err error
+		if plan, err = planImageRenames(d); err != nil {
+			t.Fatal(err)
+		}
+	})
+	got := []string{}
+	for _, r := range plan {
+		got = append(got, path.Base(r.From)+">"+path.Base(r.To))
+	}
+	want := []string{"featured.jpg>turntables-cover.jpg", "turntable-1.jpg>turntables-01.jpg", "img-0400.jpg>turntables-02.jpg"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("plan %v", got)
+	}
+	var cleanup func()
+	if err := a.store.update(func(d *Data) error {
+		var err error
+		cleanup, err = applyImageRenames(d, a.imagesDir, plan)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	cleanup()
+	var p Post
+	var d Data
+	a.store.view(func(dd *Data) { p, d = *dd.postBySlug("turntables"), *dd })
+	if p.Cover != "/img/2025/11/turntables-cover.jpg" ||
+		p.Body != "![](/img/2025/11/turntables-01.jpg#left \"A\")\n\nText ![](/img/2025/11/turntables-02.jpg) and again /img/2025/11/turntables-02.jpg." ||
+		p.Translation.Body != "[gallery]\n![](/img/2025/11/turntables-02.jpg)\n![](/img/2025/11/turntables-01.jpg)" {
+		t.Errorf("post: %q %q %q", p.Cover, p.Body, p.Translation.Body)
+	}
+	if d.Settings.Logo != logo || d.Images["2025/11/turntables-02.jpg"].Key != "2025/11/turntables-02.jpg" || d.Images["2025/11/img-0400.jpg"] != nil {
+		t.Error("records")
+	}
+	if d.Redirects["/content/images/2025/11/IMG_0400.PNG"] != "2025/11/turntables-02.jpg" {
+		t.Error("Ghost redirect not followed")
+	}
+	// Files moved, old URLs redirect, a smaller copy too.
+	for _, f := range []string{"turntables-02.jpg", "turntables-02-w600.jpg", "turntables-02-w1400.jpg"} {
+		if !fileExists(a.imagesDir, "2025/11/"+f) {
+			t.Errorf("%s missing", f)
+		}
+	}
+	if fileExists(a.imagesDir, "2025/11/img-0400.jpg") || fileExists(a.imagesDir, "2025/11/img-0400-w600.jpg") {
+		t.Error("old files left")
+	}
+	for from, to := range map[string]string{"/img/2025/11/img-0400.jpg": "/img/2025/11/turntables-02.jpg",
+		"/img/2025/11/img-0400-w600.jpg": "/img/2025/11/turntables-02-w600.jpg"} {
+		rec := do(t, a, httptest.NewRequest("GET", from, nil))
+		if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != to {
+			t.Errorf("%s: %d %s", from, rec.Code, rec.Header().Get("Location"))
+		}
+	}
+	if rec := do(t, a, httptest.NewRequest("GET", "/img/2025/11/nothing.jpg", nil)); rec.Code != 404 {
+		t.Errorf("unknown: %d", rec.Code)
+	}
+	if rec := do(t, a, httptest.NewRequest("GET", "/img/2025/11/turntables-02-w600.jpg", nil)); rec.Code != 200 {
+		t.Errorf("new copy: %d", rec.Code)
+	}
+	// A second run finds nothing to do.
+	a.store.view(func(d *Data) {
+		if plan, _ := planImageRenames(d); len(plan) != 0 {
+			t.Errorf("second plan %v", plan)
+		}
+	})
 }

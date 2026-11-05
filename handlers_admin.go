@@ -443,7 +443,8 @@ const maxUpload = 40 << 20
 
 // handleUpload stores one image (form field "file") and answers with its
 // URL and size as JSON. A "name" field, when given, names the file in
-// place of the uploaded file's name.
+// place of the uploaded file's name; with "numbered" set to 1 the next
+// free number follows it (name-01, name-02…, Data.nextNumbered).
 func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxUpload+1<<20)
 	f, hdr, err := r.FormFile("file")
@@ -461,11 +462,11 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, http.StatusRequestEntityTooLarge, fmt.Sprintf("file larger than %d MB", maxUpload>>20))
 		return
 	}
-	name := hdr.Filename
+	name, numbered := hdr.Filename, false
 	if n := strings.TrimSpace(r.FormValue("name")); n != "" {
-		name = n
+		name, numbered = n, r.FormValue("numbered") == "1"
 	}
-	im, err := a.addImage(name, data, a.now())
+	im, err := a.addImage(name, numbered, data, a.now())
 	if err != nil {
 		jsonError(w, http.StatusUnprocessableEntity, err.Error())
 		return
@@ -477,13 +478,17 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 // addImage processes an upload and records it. Holding the store lock
 // while resizing would stall the site, so the name is reserved by checking
 // the files on disk and the records, then the record is added.
-func (a *App) addImage(name string, data []byte, when time.Time) (*Image, error) {
+func (a *App) addImage(name string, numbered bool, data []byte, when time.Time) (*Image, error) {
 	exists := func(key string) bool {
 		_, known := a.store.image(key)
 		return known || fileExists(a.imagesDir, key)
 	}
 	a.uploadMu.Lock()
 	defer a.uploadMu.Unlock()
+	if numbered {
+		// Under uploadMu, so a batch of uploads counts up one by one.
+		a.store.view(func(d *Data) { name = d.nextNumbered(imageName(name)) })
+	}
 	im, err := processImage(a.imagesDir, name, data, when, exists)
 	if err != nil {
 		return nil, err

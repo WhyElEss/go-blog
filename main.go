@@ -31,6 +31,11 @@ func main() {
 				log.Fatal(err)
 			}
 			return
+		case "rename-images":
+			if err := runRenameImages(os.Args[2:]); err != nil {
+				log.Fatal(err)
+			}
+			return
 		case "merge":
 			if err := runMerge(os.Args[2:]); err != nil {
 				log.Fatal(err)

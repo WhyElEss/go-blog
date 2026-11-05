@@ -35,12 +35,14 @@
   };
 
   // upload sends one file and resolves to {url, width, height}. name, if
-  // given, names the stored file instead of the file's own name.
-  async function upload(file, name) {
+  // given, names the stored file instead of the file's own name; numbered
+  // makes the server add the next number (name-01, name-02…).
+  async function upload(file, name, numbered) {
     setStatus(status ? status.dataset.uploading + " " + file.name : "");
     const fd = new FormData();
     fd.append("file", file);
     if (name) fd.append("name", name);
+    if (name && numbered) fd.append("numbered", "1");
     let res, data;
     try {
       res = await fetch("/admin/upload", { method: "POST", body: fd, credentials: "same-origin" });
@@ -255,8 +257,16 @@
 
   const imageMarkdown = (url, align) => "![](" + url + (align && align !== "center" ? "#" + align : "") + ")";
 
+  // Pictures in the text are named after the post's URL, numbered
+  // ("halloween-candies-01"), or after its title while the URL is empty.
+  const postName = () => {
+    const slug = $('input[name="slug"]').value.trim();
+    const title = $('input[name="title_' + $('select[name="lang"]').value + '"]');
+    return slug || (title ? title.value.trim() : "");
+  };
+
   async function uploadInto(file, align) {
-    const { url } = await upload(file);
+    const { url } = await upload(file, postName(), true);
     insertBlock(imageMarkdown(url, align));
   }
 
@@ -285,7 +295,7 @@
         const urls = [];
         for (const f of files) {
           try {
-            urls.push((await upload(f)).url);
+            urls.push((await upload(f, postName(), true)).url);
           } catch {
             break;
           }
@@ -402,9 +412,7 @@
   // The cover is named after the post's URL ("halloween-candies-cover"),
   // or its title when the URL is still empty, as the server does.
   const coverName = () => {
-    const slug = $('input[name="slug"]').value.trim();
-    const title = $('input[name="title_' + $('select[name="lang"]').value + '"]');
-    const base = slug || (title ? title.value.trim() : "");
+    const base = postName();
     return base ? base + "-cover" : "";
   };
   $("[data-cover-upload]").addEventListener("click", async () => {

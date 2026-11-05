@@ -19,6 +19,11 @@ renders a page in a few milliseconds.
   (camera, GPS). JPEG, PNG
   (transparency kept), GIF (kept as is, animation included), WebP (saved as
   JPEG) and SVG.
+- **Image names** follow the post's URL: the cover is `<url>-cover`, the
+  pictures in the text `<url>-01`, `<url>-02` and so on (the title stands in
+  while the URL field is empty), e.g. `halloween-candies-cover.jpg`,
+  `halloween-candies-01.jpg`. Images uploaded on the library page or in
+  Settings keep their own names.
 - **Image placement** next to the text: left, right or centre, with an
   optional caption. Floats turn into full-width images on phones.
 - **Image rows**: several pictures under `[gallery]` are laid out in rows
@@ -125,6 +130,20 @@ with `?lang=`:
 ```bash
 docker compose stop blog
 docker compose run --rm blog merge <slug> <translation-slug>
+docker compose up -d
+```
+
+Pictures uploaded before they were named after their post can be renamed
+the same way, with the blog stopped: each post's cover becomes
+`<url>-cover`, its pictures `<url>-01`, `-02`… in the order they appear
+(the original text, then the translation), and every reference to them
+follows. The old URLs redirect to the new ones. `-n` only prints the
+plan.
+
+```bash
+docker compose stop blog
+docker compose run --rm blog rename-images -n
+docker compose run --rm blog rename-images
 docker compose up -d
 ```
 
