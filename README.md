@@ -224,9 +224,10 @@ A second install can serve the same blog from another machine, ready to take
 over. Give it `ADMIN_UI=off` and no `BLUESKY_*`: an admin panel there would
 edit a copy that the next refresh overwrites, and two senders would announce
 every post twice. Keep its data volume an exact copy of the primary's, for
-instance by streaming `tar -czf - -C /data .` from a container on the
-primary and unpacking it into the standby's volume with the blog stopped;
-both are safe to read while the primary runs, as for backups. Switching is
+instance by mirroring it with `rsync -a --delete` into a folder on the
+standby and copying that into the standby's volume with its blog stopped
+(the blog reads `blog.json` only at start); the volume is safe to read
+while the primary runs, as for backups. Switching is
 then a matter of where the hostname points. On the day it takes over for
 good, set `ADMIN_UI` back and add the Bluesky lines: the user name, password
 and 2FA came over in `auth.json`.
