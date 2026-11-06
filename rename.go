@@ -222,6 +222,18 @@ func (d *Data) movedImage(key string) string {
 			ext := path.Ext(to)
 			return strings.TrimSuffix(to, ext) + "-w" + m[2] + ext
 		}
+		// A smaller copy no longer made (blog recompress-images dropped
+		// -w1400): the next larger copy the image has, else the full one
+		// (a portrait's full copy may now be narrower than 1400).
+		if im := d.Images[m[1]+m[3]]; im != nil {
+			w, _ := strconv.Atoi(m[2])
+			for _, cw := range im.Widths {
+				if cw > w {
+					return strings.TrimPrefix(variantURL(im.Key, im.Width, cw), "/img/")
+				}
+			}
+			return im.Key
+		}
 	}
 	return ""
 }

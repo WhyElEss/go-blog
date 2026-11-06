@@ -95,6 +95,7 @@ type Image struct {
 	Height   int       `json:"height"`
 	Widths   []int     `json:"widths"` // ascending; the last is Width
 	Bytes    int64     `json:"bytes"`
+	Quality  int       `json:"quality,omitempty"` // JPEG quality of the copies; 0 before 2026-11-06
 	Uploaded time.Time `json:"uploaded"`
 }
 

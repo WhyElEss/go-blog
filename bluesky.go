@@ -180,7 +180,7 @@ func (a *App) coverThumb(cover string) ([]byte, string) {
 	// Widest first, but no wider than a card needs.
 	for i := len(im.Widths) - 1; i >= 0; i-- {
 		w := im.Widths[i]
-		if w > 1400 {
+		if w > maxImageSide {
 			continue
 		}
 		file := strings.TrimPrefix(variantURL(im.Key, im.Width, w), "/img/")

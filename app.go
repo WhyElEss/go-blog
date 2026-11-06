@@ -223,8 +223,10 @@ func (a *App) origin(r *http.Request) string {
 	return scheme + "://" + r.Host
 }
 
-// handleImage serves uploads. A file never changes under its name, so it
-// may be cached for a year; a renamed one redirects to its new name.
+// handleImage serves uploads. A file changes under its name only when
+// `blog recompress-images` makes it smaller, so it may be cached for a
+// year; a renamed one redirects to its new name, a copy no longer made to
+// a larger one.
 func (a *App) handleImage(w http.ResponseWriter, r *http.Request) {
 	p := path.Clean("/" + r.PathValue("path"))
 	if strings.Contains(p, "..") || strings.HasSuffix(p, ".tmp") {

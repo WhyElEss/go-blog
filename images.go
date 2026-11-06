@@ -23,15 +23,17 @@ import (
 
 // Uploads are re-encoded, which also drops their metadata (camera, GPS).
 // The largest copy is at most maxImageSide on its longer side, so a phone
-// screenshot is as heavy as a landscape photo; smaller copies for the
-// srcset are made at the widths below its width.
+// screenshot is as heavy as a landscape photo: 1440 px is the 720 px text
+// column on a 2x screen. Smaller copies for the srcset are made at the
+// widths below its width. `blog recompress-images` brings older uploads
+// to these settings (recompress.go).
 const (
-	maxImageSide   = 2000
+	maxImageSide   = 1440
 	maxImagePixels = 60_000_000 // decoding needs 4 bytes per pixel
-	jpegQuality    = 84
+	jpegQuality    = 80
 )
 
-var variantWidths = []int{600, 1000, 1400}
+var variantWidths = []int{600, 1000}
 
 var errImageFormat = errors.New("unsupported image format: use JPEG, PNG, GIF, WebP or SVG")
 
@@ -114,12 +116,7 @@ func processImage(dir, name string, data []byte, taken time.Time, exists func(ke
 	if orient >= 5 {
 		ow, oh = oh, ow
 	}
-	fw, fh := ow, oh
-	if ow >= oh && ow > maxImageSide {
-		fw, fh = maxImageSide, max(1, (oh*maxImageSide+ow/2)/ow)
-	} else if oh > ow && oh > maxImageSide {
-		fw, fh = max(1, (ow*maxImageSide+oh/2)/oh), maxImageSide
-	}
+	fw, fh := fitSize(ow, oh)
 	sw, sh := fw, fh
 	if orient >= 5 {
 		sw, sh = fh, fw
@@ -138,47 +135,82 @@ func processImage(dir, name string, data []byte, taken time.Time, exists func(ke
 	key := freeKey(folder, stem, ext, exists)
 	im := &Image{Key: key, Name: name, Width: fw, Height: fh}
 
+	copies, err := encodeCopies(full, ext)
+	if err != nil {
+		return nil, err
+	}
+	var written []string
+	for _, c := range copies {
+		p := filepath.Join(dir, filepath.FromSlash(strings.TrimPrefix(variantURL(key, fw, c.Width), "/img/")))
+		if err := writeFile(p, c.Data); err != nil {
+			for _, p := range written {
+				os.Remove(p)
+			}
+			return nil, err
+		}
+		written = append(written, p)
+		im.Widths = append(im.Widths, c.Width)
+	}
+	im.Bytes = int64(len(copies[len(copies)-1].Data))
+	if ext == ".jpg" {
+		im.Quality = jpegQuality
+	}
+	return im, nil
+}
+
+// fitSize is the full copy's size for a picture of w×h: at most
+// maxImageSide on the longer side.
+func fitSize(w, h int) (int, int) {
+	switch {
+	case w >= h && w > maxImageSide:
+		return maxImageSide, max(1, (h*maxImageSide+w/2)/w)
+	case h > w && h > maxImageSide:
+		return max(1, (w*maxImageSide+h/2)/h), maxImageSide
+	}
+	return w, h
+}
+
+// imageCopy is one encoded copy of an image, Width pixels wide.
+type imageCopy struct {
+	Width int
+	Data  []byte
+}
+
+// copyWidths are the widths of the copies of a full copy fw wide,
+// ascending; the last is fw.
+func copyWidths(fw int) []int {
 	var widths []int
 	for _, w := range variantWidths {
 		if w < fw {
 			widths = append(widths, w)
 		}
 	}
-	widths = append(widths, fw)
-	im.Widths = widths
+	return append(widths, fw)
+}
 
-	var written []string
-	cleanup := func() {
-		for _, p := range written {
-			os.Remove(p)
-		}
-	}
-	for _, w := range widths {
+// encodeCopies encodes the full copy and its smaller copies: JPEG at
+// jpegQuality, or PNG for ext ".png".
+func encodeCopies(full image.Image, ext string) ([]imageCopy, error) {
+	fw, fh := full.Bounds().Dx(), full.Bounds().Dy()
+	var copies []imageCopy
+	for _, w := range copyWidths(fw) {
 		img := full
 		if w != fw {
 			img = scale(full, w, max(1, (fh*w+fw/2)/fw))
 		}
 		var buf bytes.Buffer
+		var err error
 		if ext == ".png" {
 			err = (&png.Encoder{CompressionLevel: png.BestCompression}).Encode(&buf, img)
 		} else {
 			err = jpeg.Encode(&buf, img, &jpeg.Options{Quality: jpegQuality})
 		}
 		if err != nil {
-			cleanup()
 			return nil, err
 		}
-		p := filepath.Join(dir, filepath.FromSlash(strings.TrimPrefix(variantURL(key, fw, w), "/img/")))
-		if err := writeFile(p, buf.Bytes()); err != nil {
-			cleanup()
-			return nil, err
-		}
-		written = append(written, p)
-		if w == fw {
-			im.Bytes = int64(buf.Len())
-		}
+		copies = append(copies, imageCopy{w, buf.Bytes()})
 	}
-	return im, nil
+	return copies, nil
 }
 
 // freeKey returns folder/stem+ext, or with -2, -3… when that is taken.

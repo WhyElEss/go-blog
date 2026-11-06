@@ -164,7 +164,7 @@ var messages = map[string][2]string{
 	"copied":           {"Скопировано", "Copied"},
 	"confirm_img_del":  {"Удалить картинку со всеми копиями?", "Delete the image and all its copies?"},
 	"img_in_use":       {"Картинка используется — сначала уберите её из записей.", "The image is in use: remove it from posts first."},
-	"img_hint":         {"Загруженные картинки уменьшаются до 2000 px по большей стороне, плюс копии 600/1000/1400 px шириной для телефонов. Метаданные (камера, GPS) удаляются.", "Uploads are scaled to at most 2000 px on the longer side, plus 600/1000/1400 px wide copies for phones. Metadata (camera, GPS) is removed."},
+	"img_hint":         {"Загруженные картинки уменьшаются до 1440 px по большей стороне, плюс копии 600 и 1000 px шириной для телефонов. Метаданные (камера, GPS) удаляются.", "Uploads are scaled to at most 1440 px on the longer side, plus 600 and 1000 px wide copies for phones. Metadata (camera, GPS) is removed."},
 	"site_title":       {"Название блога", "Blog title"},
 	"site_desc":        {"Описание", "Description"},
 	"site_desc_alt":    {"Описание на втором языке", "Description in the second language"},

@@ -399,18 +399,18 @@ func TestProcessImage(t *testing.T) {
 	none := func(string) bool { return false }
 	when := time.Date(2026, 10, 30, 0, 0, 0, 0, time.UTC)
 
-	// 3000×1500 landscape: full copy 2000×1000 plus 600/1000/1400.
+	// 3000×1500 landscape: full copy 1440×720 plus 600/1000.
 	im, err := processImage(dir, "My Photo.JPG", encodeJPEG(t, 3000, 1500, 0), when, none)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if im.Key != "2026/10/my-photo.jpg" || im.Width != 2000 || im.Height != 1000 {
+	if im.Key != "2026/10/my-photo.jpg" || im.Width != 1440 || im.Height != 720 || im.Quality != 80 {
 		t.Fatalf("got %+v", im)
 	}
-	if len(im.Widths) != 4 || im.Widths[3] != 2000 {
+	if !slices.Equal(im.Widths, []int{600, 1000, 1440}) {
 		t.Fatalf("widths %v", im.Widths)
 	}
-	for _, name := range []string{"my-photo.jpg", "my-photo-w600.jpg", "my-photo-w1000.jpg", "my-photo-w1400.jpg"} {
+	for _, name := range []string{"my-photo.jpg", "my-photo-w600.jpg", "my-photo-w1000.jpg"} {
 		if _, err := os.Stat(filepath.Join(dir, "2026", "10", name)); err != nil {
 			t.Error(err)
 		}
@@ -436,12 +436,12 @@ func TestProcessImage(t *testing.T) {
 	}
 
 	// A tall picture is limited by its height: a 1206×2622 phone
-	// screenshot becomes 920×2000, with a 600 px copy.
+	// screenshot becomes 662×1440, with a 600 px copy.
 	im, err = processImage(dir, "screenshot.jpg", encodeJPEG(t, 1206, 2622, 0), when, none)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if im.Width != 920 || im.Height != 2000 || !slices.Equal(im.Widths, []int{600, 920}) {
+	if im.Width != 662 || im.Height != 1440 || !slices.Equal(im.Widths, []int{600, 662}) {
 		t.Errorf("tall: %+v", im)
 	}
 	if f, err := os.Open(filepath.Join(dir, filepath.FromSlash(im.Key))); err != nil {
@@ -449,7 +449,7 @@ func TestProcessImage(t *testing.T) {
 	} else {
 		cfg, _, err := image.DecodeConfig(f)
 		f.Close()
-		if err != nil || cfg.Width != 920 || cfg.Height != 2000 {
+		if err != nil || cfg.Width != 662 || cfg.Height != 1440 {
 			t.Errorf("tall file is %dx%d (%v)", cfg.Width, cfg.Height, err)
 		}
 	}
@@ -1610,7 +1610,7 @@ func TestRenameImages(t *testing.T) {
 		t.Error("Ghost redirect not followed")
 	}
 	// Files moved, old URLs redirect, a smaller copy too.
-	for _, f := range []string{"turntables-02.jpg", "turntables-02-w600.jpg", "turntables-02-w1400.jpg"} {
+	for _, f := range []string{"turntables-02.jpg", "turntables-02-w600.jpg", "turntables-02-w1000.jpg"} {
 		if !fileExists(a.imagesDir, "2025/11/"+f) {
 			t.Errorf("%s missing", f)
 		}
@@ -1637,4 +1637,90 @@ func TestRenameImages(t *testing.T) {
 			t.Errorf("second plan %v", plan)
 		}
 	})
+}
+
+func TestRecompressImages(t *testing.T) {
+	dataDir := t.TempDir()
+	t.Setenv("DATA_DIR", dataDir)
+	images := filepath.Join(dataDir, "images")
+	// An upload made with the old settings: 2000 px at q84, copies
+	// 600/1000/1400; and a GIF, which is never touched.
+	src := image.NewRGBA(image.Rect(0, 0, 2000, 1000))
+	for i := range src.Pix {
+		src.Pix[i] = byte(i * 7)
+	}
+	put := func(name string, w int) {
+		var img image.Image = src
+		if w != 2000 {
+			img = scale(src, w, w/2)
+		}
+		var buf bytes.Buffer
+		jpeg.Encode(&buf, img, &jpeg.Options{Quality: 84})
+		if err := writeFile(filepath.Join(images, "2026", "11", name), buf.Bytes()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	put("p.jpg", 2000)
+	put("p-w600.jpg", 600)
+	put("p-w1000.jpg", 1000)
+	put("p-w1400.jpg", 1400)
+	writeFile(filepath.Join(images, "2026", "11", "a.gif"), []byte("GIF89a"))
+	store, err := openStore(filepath.Join(dataDir, "blog.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.update(func(d *Data) error {
+		d.Images = map[string]*Image{
+			"2026/11/p.jpg": {Key: "2026/11/p.jpg", Width: 2000, Height: 1000, Widths: []int{600, 1000, 1400, 2000}},
+			"2026/11/a.gif": {Key: "2026/11/a.gif", Width: 3000, Height: 100, Widths: []int{3000}},
+		}
+		return nil
+	})
+
+	// -n writes nothing.
+	if err := runRecompressImages([]string{"-n"}); err != nil {
+		t.Fatal(err)
+	}
+	if !fileExists(images, "2026/11/p-w1400.jpg") {
+		t.Fatal("-n changed files")
+	}
+	if err := runRecompressImages(nil); err != nil {
+		t.Fatal(err)
+	}
+	store, _ = openStore(filepath.Join(dataDir, "blog.json"))
+	var d Data
+	store.view(func(dd *Data) { d = *dd })
+	im := d.Images["2026/11/p.jpg"]
+	if im.Width != 1440 || im.Height != 720 || im.Quality != 80 || !slices.Equal(im.Widths, []int{600, 1000, 1440}) {
+		t.Fatalf("record %+v", im)
+	}
+	f, _ := os.Open(filepath.Join(images, "2026", "11", "p.jpg"))
+	cfg, err := jpeg.DecodeConfig(f)
+	f.Close()
+	if err != nil || cfg.Width != 1440 || cfg.Height != 720 {
+		t.Errorf("full copy %dx%d %v", cfg.Width, cfg.Height, err)
+	}
+	if st, _ := os.Stat(filepath.Join(images, "2026", "11", "p.jpg")); st == nil || st.Size() != im.Bytes {
+		t.Error("bytes")
+	}
+	if fileExists(images, "2026/11/p-w1400.jpg") || !fileExists(images, "2026/11/p-w1000.jpg") {
+		t.Error("copies")
+	}
+	left, _ := filepath.Glob(filepath.Join(images, "2026", "11", "*.tmp"))
+	if len(left) != 0 {
+		t.Errorf("left %v", left)
+	}
+	if g := d.Images["2026/11/a.gif"]; g.Width != 3000 || needsRecompress(g) || needsRecompress(im) {
+		t.Error("needsRecompress")
+	}
+	// The dropped copy redirects to the next larger one.
+	if got := d.movedImage("2026/11/p-w1400.jpg"); got != "2026/11/p.jpg" {
+		t.Errorf("w1400 → %q", got)
+	}
+	if got := d.movedImage("2026/11/p-w2000.jpg"); got != "2026/11/p.jpg" {
+		t.Errorf("wider than the full copy → %q", got)
+	}
+	if got := d.movedImage("2026/11/q-w1400.jpg"); got != "" {
+		t.Errorf("unknown → %q", got)
+	}
 }

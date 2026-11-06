@@ -14,8 +14,9 @@ renders a page in a few milliseconds.
   warning about unsaved changes.
 - **Images**: upload from the toolbar, paste from the clipboard or drop onto
   the text. Every upload is decoded, turned upright from its EXIF
-  orientation, scaled to at most 2000 px on the longer side, saved with
-  600/1000/1400 px wide copies for `srcset`, and stripped of metadata
+  orientation, scaled to at most 1440 px on the longer side (the text
+  column on a 2x screen), saved as JPEG quality 80 with 600 and 1000 px
+  wide copies for `srcset`, and stripped of metadata
   (camera, GPS). JPEG, PNG
   (transparency kept), GIF (kept as is, animation included), WebP (saved as
   JPEG) and SVG.
@@ -144,6 +145,20 @@ plan.
 docker compose stop blog
 docker compose run --rm blog rename-images -n
 docker compose run --rm blog rename-images
+docker compose up -d
+```
+
+Pictures uploaded with earlier settings (2000 px, quality 84, a 1400 px
+copy) are brought to the current ones the same way. The new copies are
+made from the stored full copy, since the upload itself is not kept;
+names stay, and a copy that is no longer made redirects to the next larger
+one, or to the full copy. GIF and SVG are left as they are. `-n` prints
+every image with its old and new size and changes nothing.
+
+```bash
+docker compose stop blog
+docker compose run --rm blog recompress-images -n
+docker compose run --rm blog recompress-images
 docker compose up -d
 ```
 
