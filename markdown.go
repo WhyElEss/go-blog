@@ -391,7 +391,17 @@ const (
 	galleryWidth        = 720 // px, the text column
 	galleryGap          = 6   // px, as in content.css
 	galleryRowHeight    = 180 // px, the height rows aim at
+	galleryRowMax       = 270 // px: a last row taller than this across the column is short
 )
+
+// galleryHeight is the height of tiles n across the column.
+func galleryHeight(n []int) float64 {
+	sum := 0
+	for _, v := range n {
+		sum += v
+	}
+	return float64(galleryWidth-galleryGap*(len(n)-1)) * 20 / float64(sum)
+}
 
 func galleryRatio(im Image, known bool) int {
 	if !known || im.Width <= 0 || im.Height <= 0 {
@@ -403,26 +413,21 @@ func galleryRatio(im Image, known bool) int {
 
 // galleryRows splits tiles of proportions n[i]/20 into rows, in order, so
 // that the rows' heights at the column's width come as close as they can
-// to galleryRowHeight (least squares over all rows). The last row may stay
-// short of the width rather than grow taller than that, at a cost for the
-// empty room; it is then centred. It returns the
-// index where each row starts.
+// to galleryRowHeight (least squares over all rows). A last row that
+// would be taller than galleryRowMax across the column (two phone
+// screenshots, a lone photo) stays at the aim's height, centred and short
+// of the width, at a cost for the empty room; a last row a little taller
+// than the aim fills the width like the others. It returns the index where
+// each row starts.
 func galleryRows(n []int) []int {
-	height := func(i, j int) float64 { // tiles i..j-1 across the column
-		sum := 0
-		for _, v := range n[i:j] {
-			sum += v
-		}
-		return float64(galleryWidth-galleryGap*(j-i-1)) * 20 / float64(sum)
-	}
 	cost := make([]float64, len(n)+1)
 	from := make([]int, len(n)+1)
 	for j := 1; j <= len(n); j++ {
 		cost[j] = math.Inf(1)
 		for i := 0; i < j; i++ {
-			h := height(i, j)
+			h := galleryHeight(n[i:j])
 			d := h - galleryRowHeight
-			if j == len(n) && d > 0 {
+			if j == len(n) && h > galleryRowMax {
 				// A last row kept at the aim's height leaves part of the
 				// width empty; that counts as much as the same share of
 				// height missing.
@@ -465,13 +470,9 @@ func (r *imageRenderer) renderGallery(w util.BufWriter, src []byte, node ast.Nod
 		for _, v := range ratios[i:j] {
 			sum += v
 		}
-		// A last row that would be taller than the aim keeps that height
-		// and stands centred, short of the width (content.css: .short).
-		short := false
-		if j == len(ratios) {
-			full := int(math.Round(float64(galleryWidth-galleryGap*(j-i-1)) * 20 / galleryRowHeight))
-			short = full > sum
-		}
+		// A last row that would be too tall across the column keeps the
+		// aim's height and stands centred (content.css: .short).
+		short := j == len(ratios) && galleryHeight(ratios[i:j]) > galleryRowMax
 		if short {
 			w.WriteString(`<div class="grow short">`)
 		} else {

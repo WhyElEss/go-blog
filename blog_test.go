@@ -122,6 +122,8 @@ func TestMarkdownGallery(t *testing.T) {
 			return Image{Key: key, Width: 2000, Height: 1000, Widths: []int{600, 2000}}, true
 		case "t.jpg":
 			return Image{Key: key, Width: 600, Height: 900, Widths: []int{400, 600}}, true
+		case "wide.jpg":
+			return Image{Key: key, Width: 2000, Height: 1125, Widths: []int{600, 2000}}, true
 		case "pano.jpg":
 			return Image{Key: key, Width: 9000, Height: 1000, Widths: []int{9000}}, true
 		}
@@ -158,10 +160,16 @@ func TestMarkdownGallery(t *testing.T) {
 	if !strings.Contains(h, `<div class="gallery"><div class="grow short"><div class="gi gr-13">`) || !strings.Contains(h, `sizes="(min-width: 760px) 117px, 29vw"`) {
 		t.Errorf("short last row:\n%s", h)
 	}
-	// A full row is not short.
+	// A full row is not short, nor is a last row a little taller than the
+	// aim: four 16:9 pictures make two rows of two, 198 px tall, both
+	// across the column.
 	h, _ = md.render("[gallery]\n![](/img/w.jpg)\n![](/img/w.jpg)\n")
 	if strings.Contains(h, "short") {
 		t.Errorf("full row marked short:\n%s", h)
+	}
+	h, _ = md.render("[gallery]\n![](/img/wide.jpg)\n![](/img/wide.jpg)\n![](/img/wide.jpg)\n![](/img/wide.jpg)\n")
+	if strings.Contains(h, "short") || strings.Count(h, `<div class="grow">`) != 2 {
+		t.Errorf("four 16:9 pictures:\n%s", h)
 	}
 
 	// Not galleries: the mark alone, the mark after other text, text among
@@ -188,8 +196,10 @@ func TestGalleryRows(t *testing.T) {
 		{[]int{80}, []int{0}},
 		// Four 3:2 pictures: one row (117 px) rather than three and a lone one.
 		{[]int{30, 30, 30, 30}, []int{0}},
-		// Five: three (157 px) and two (180 px, most of the width).
-		{[]int{30, 30, 30, 30, 30}, []int{0, 3}},
+		// Five: two (238 px) and three (157 px), both across the column.
+		{[]int{30, 30, 30, 30, 30}, []int{0, 2}},
+		// Four 16:9 photos: two rows of two, 198 px each.
+		{[]int{36, 36, 36, 36}, []int{0, 2}},
 		// The case that made a lone 3:2 tile 480 px tall with flex-wrap:
 		// square, 16:9, 2.35:1, square, 3:2, 2.85:1, 1.2:1, 1.55:1.
 		{[]int{20, 36, 47, 20, 30, 57, 24, 31}, nil},
