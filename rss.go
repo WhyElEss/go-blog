@@ -110,7 +110,11 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 			Description: a.textExcerpt(v), Encoded: cdata{h},
 		}
 		if p.Cover != "" {
-			it.Encoded.Value = `<p><img src="` + absURL(origin, p.Cover) + `" alt=""></p>` + it.Encoded.Value
+			cover := p.Cover
+			if im, _, ok := a.postCover(&p); ok {
+				cover = "/img/" + im.Key
+			}
+			it.Encoded.Value = `<p><img src="` + absURL(origin, cover) + `" alt=""></p>` + it.Encoded.Value
 		}
 		ch.Items = append(ch.Items, it)
 		if ch.LastBuildDate == "" {

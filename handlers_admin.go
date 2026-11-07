@@ -158,6 +158,7 @@ type editPage struct {
 	AllTags   []string // every tag in use, most used first, to pick from
 	DateValue string   // datetime-local
 	Live      bool
+	CoverPos  int // the link card's frame on the cover (cards.go)
 }
 
 // editTab is the editor's text fields for one language.
@@ -179,6 +180,7 @@ func (a *App) editData(r *http.Request, p Post, isNew bool) editPage {
 	}
 	e := editPage{adminBase: a.adminBase(r, title), Post: p, New: isNew, TagsText: strings.Join(p.Tags, ", "), Live: p.live(a.now())}
 	e.Post.Lang = normLang(p.Lang)
+	e.CoverPos = coverPos(&p)
 	a.store.view(func(d *Data) {
 		for _, row := range d.tagRows() {
 			e.AllTags = append(e.AllTags, row.Name)
@@ -254,6 +256,10 @@ func (a *App) handleSave(w http.ResponseWriter, r *http.Request) {
 		Lang:  normLang(r.FormValue("lang")),
 
 		SendBluesky: r.FormValue("bluesky") == "1",
+	}
+	if n, err := strconv.Atoi(r.FormValue("cover_pos")); err == nil && n != 50 && in.Cover != "" {
+		n = min(100, max(0, n))
+		in.CoverPos = &n
 	}
 	// One set of text fields per language; the original language's is the
 	// post, the other's (when filled in) its translation. A post written
@@ -339,6 +345,7 @@ func (a *App) handleSave(w http.ResponseWriter, r *http.Request) {
 			p.PublishedAt = now.Truncate(time.Minute)
 		}
 		p.Title, p.Slug, p.Body, p.Excerpt, p.Cover, p.Tags, p.Page, p.Lang = in.Title, in.Slug, in.Body, in.Excerpt, in.Cover, in.Tags, in.Page, in.Lang
+		p.CoverPos = in.CoverPos
 		p.Translation = in.Translation
 		// Once sent, the link stays sent. Ticking the box again after a
 		// failure asks for another try.
@@ -370,6 +377,8 @@ func (a *App) handleSave(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "save failed", http.StatusInternalServerError)
 		return
 	}
+	// Before Bluesky: the card picture is this copy.
+	a.coverCard(saved.ID)
 	msg := "saved"
 	if a.bsky != nil {
 		var due bool
@@ -425,6 +434,7 @@ func (a *App) handleDelete(w http.ResponseWriter, r *http.Request) {
 	if err != nil && !errors.Is(err, errNotFound) {
 		log.Printf("delete post: %v", err)
 	}
+	a.pruneCards()
 	http.Redirect(w, r, "/admin/?m=deleted", http.StatusSeeOther)
 }
 
@@ -565,6 +575,7 @@ func (a *App) handleImageDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	if removed != nil {
 		removeImageFiles(a.imagesDir, removed)
+		a.pruneCards()
 	}
 	http.Redirect(w, r, "/admin/images?m=deleted", http.StatusSeeOther)
 }

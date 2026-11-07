@@ -401,14 +401,76 @@
     });
   }
 
-  // Cover.
+  // Cover, with the frame of its link card copy (1200:630, cards.go):
+  // dragged along the side that is cut, saved as cover_pos 0-100.
   const cover = $("#cover");
   const coverPreview = $("#cover-preview");
+  const coverCrop = $("#cover-crop");
+  const frame = $("#cover-frame");
+  const framePos = $("#cover-pos");
+  const coverHint = $("#cover-hint");
+  const cardRatio = 1200 / 630;
+  let frameWide = false; // the cover is wider than a card: the frame moves sideways
+  let frameShare = 1; // the frame's share of the side it moves along
+  const placeFrame = () => {
+    const w = coverPreview.naturalWidth, h = coverPreview.naturalHeight;
+    const ok = !coverCrop.hidden && w > 0 && h > 0 && /^\/img\/.+\.(jpg|png)$/.test(cover.value);
+    frame.hidden = coverHint.hidden = !ok;
+    if (!ok) return;
+    const pos = Number(framePos.value);
+    frameWide = w / h > cardRatio;
+    frameShare = frameWide ? Math.min(1, (h * cardRatio) / w) : Math.min(1, w / cardRatio / h);
+    const size = frameShare * 100 + "%", offset = (1 - frameShare) * pos + "%";
+    frame.style.width = frameWide ? size : "100%";
+    frame.style.height = frameWide ? "100%" : size;
+    frame.style.left = frameWide ? offset : "0";
+    frame.style.top = frameWide ? "0" : offset;
+    frame.setAttribute("aria-valuenow", pos);
+  };
+  const setFramePos = (pos) => {
+    pos = Math.round(Math.min(100, Math.max(0, pos)));
+    if (String(pos) === framePos.value) return;
+    framePos.value = pos;
+    dirty = true;
+    placeFrame();
+  };
+  coverPreview.addEventListener("load", placeFrame);
+  frame.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    frame.setPointerCapture(e.pointerId);
+    frame.classList.add("dragging");
+    const start = frameWide ? e.clientX : e.clientY;
+    const startPos = Number(framePos.value);
+    const box = coverCrop.getBoundingClientRect();
+    const room = (frameWide ? box.width : box.height) * (1 - frameShare);
+    const move = (ev) => {
+      if (room > 0) setFramePos(startPos + (((frameWide ? ev.clientX : ev.clientY) - start) / room) * 100);
+    };
+    const end = () => {
+      frame.classList.remove("dragging");
+      frame.removeEventListener("pointermove", move);
+      frame.removeEventListener("pointerup", end);
+      frame.removeEventListener("pointercancel", end);
+    };
+    frame.addEventListener("pointermove", move);
+    frame.addEventListener("pointerup", end);
+    frame.addEventListener("pointercancel", end);
+  });
+  frame.addEventListener("keydown", (e) => {
+    const step = { ArrowLeft: -5, ArrowUp: -5, ArrowRight: 5, ArrowDown: 5, Home: -100, End: 100 }[e.key];
+    if (step === undefined) return;
+    e.preventDefault();
+    setFramePos(Number(framePos.value) + step);
+  });
+  // A new cover starts with the frame in the centre.
   const showCover = () => {
-    coverPreview.hidden = !cover.value;
+    framePos.value = 50;
+    coverCrop.hidden = !cover.value;
     if (cover.value) coverPreview.src = cover.value;
+    placeFrame();
   };
   cover.addEventListener("input", showCover);
+  if (coverPreview.complete) placeFrame();
   // The cover is named after the post's URL ("halloween-candies-cover"),
   // or its title when the URL is still empty, as the server does.
   const coverName = () => {

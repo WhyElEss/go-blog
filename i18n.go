@@ -96,6 +96,7 @@ var messages = map[string][2]string{
 	"cover":            {"Обложка", "Cover image"},
 	"upload":           {"Загрузить", "Upload"},
 	"remove":           {"Убрать", "Remove"},
+	"cover_frame":      {"Рамка 1.91:1 — так обложка будет выглядеть везде: в посте, в плитках на главной и в карточках ссылки в Bluesky, Facebook и других соцсетях. Перетащите её; загруженный оригинал сохраняется, рамку можно сдвинуть позже.", "The 1.91:1 frame is the cover everywhere: on the post, in the tiles on the home page and in link cards on Bluesky, Facebook and others. Drag it; the uploaded original is kept, so the frame can be moved later."},
 	"tags":             {"Теги", "Tags"},
 	"tags_hint":        {"Через запятую.", "Comma-separated."},
 	"lang":             {"Язык оригинала", "Original language"},

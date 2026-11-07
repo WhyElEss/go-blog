@@ -25,6 +25,12 @@ renders a page in a few milliseconds.
   while the URL field is empty), e.g. `halloween-candies-cover.jpg`,
   `halloween-candies-01.jpg`. Images uploaded on the library page or in
   Settings keep their own names.
+- **Covers** are 1.91:1 everywhere, the shape of link cards on Bluesky,
+  Facebook and elsewhere: on the post page, in the post list and in
+  `og:image` and the Bluesky card. A frame over the uploaded cover in the
+  editor picks the part (centre by default); on save the blog cuts that
+  part (up to 1440×756, with 600 and 1000 px copies). The upload is kept,
+  so the frame can be moved later.
 - **Image placement** next to the text: left, right or centre, with an
   optional caption. Floats turn into full-width images on phones.
 - **Image rows**: several pictures under `[gallery]` are laid out in rows
@@ -160,6 +166,16 @@ docker compose stop blog
 docker compose run --rm blog recompress-images -n
 docker compose run --rm blog recompress-images
 docker compose up -d
+```
+
+Cut covers are made when a post is saved. For covers saved before that,
+or after restoring images, make them in one go (each cut around the
+centre until its frame is moved in the editor); this writes only image
+files, so the blog may keep running. Copies no post needs any more are
+removed.
+
+```bash
+docker compose run --rm blog make-cards
 ```
 
 ## Running it

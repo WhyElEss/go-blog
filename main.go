@@ -41,6 +41,11 @@ func main() {
 				log.Fatal(err)
 			}
 			return
+		case "make-cards":
+			if err := runMakeCards(os.Args[2:]); err != nil {
+				log.Fatal(err)
+			}
+			return
 		case "merge":
 			if err := runMerge(os.Args[2:]); err != nil {
 				log.Fatal(err)

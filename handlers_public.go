@@ -33,10 +33,13 @@ type pageBase struct {
 	FeedURL string // the feed in SiteLang
 	OGTitle string
 	OGImage string // absolute URL
-	OGType  string
-	Admin   bool
-	Version string
-	Year    int
+	// OGImageW and OGImageH are the cut cover's size (cards.go), 0 when
+	// og:image is the cover as uploaded.
+	OGImageW, OGImageH int
+	OGType             string
+	Admin              bool
+	Version            string
+	Year               int
 	// Gallery loads the picture viewer: the page has images that open in it.
 	Gallery bool
 	// Canonical and Alternates tell search engines which address holds
@@ -134,10 +137,9 @@ func (a *App) toCard(p Post, v postText, uiLang string, now time.Time) card {
 	for _, tg := range p.Tags {
 		c.Tags = append(c.Tags, tagLink{Name: tg, URL: "/tag/" + tagSlug(tg) + "/"})
 	}
-	if key, ok := strings.CutPrefix(p.Cover, "/img/"); ok {
-		if im, ok := a.store.image(key); ok {
-			c.CoverW, c.CoverH, c.CoverSrcset = im.Width, im.Height, srcset(im)
-		}
+	if im, _, ok := a.postCover(&p); ok {
+		c.Cover = "/img/" + im.Key
+		c.CoverW, c.CoverH, c.CoverSrcset = im.Width, im.Height, srcset(im)
 	}
 	return c
 }
@@ -332,6 +334,9 @@ func (a *App) handlePost(w http.ResponseWriter, r *http.Request, slug string) {
 	data.OGType = "article"
 	if p.Cover != "" {
 		data.OGImage = absURL(data.Origin, p.Cover)
+		if im, cut, _ := a.postCover(&p); cut {
+			data.OGImage, data.OGImageW, data.OGImageH = absURL(data.Origin, "/img/"+im.Key), im.Width, im.Height
+		}
 	}
 	if older != nil {
 		c := a.toCard(*older, older.text(lang), lang, now)

@@ -1724,3 +1724,164 @@ func TestRecompressImages(t *testing.T) {
 		t.Errorf("unknown → %q", got)
 	}
 }
+
+func TestCardCrop(t *testing.T) {
+	for _, c := range []struct {
+		w, h, pos    int
+		crop         image.Rectangle
+		sizeW, sizeH int
+	}{
+		{1440, 1080, 50, image.Rect(0, 162, 1440, 918), 1440, 756},
+		{1440, 1080, 0, image.Rect(0, 0, 1440, 756), 1440, 756},
+		{1440, 1080, 100, image.Rect(0, 324, 1440, 1080), 1440, 756},
+		{2000, 1500, 50, image.Rect(0, 225, 2000, 1275), 1440, 756},
+		{632, 632, 50, image.Rect(0, 150, 632, 482), 632, 332},
+		{1206, 450, 0, image.Rect(0, 0, 857, 450), 857, 450},
+		{1206, 450, 100, image.Rect(349, 0, 1206, 450), 857, 450},
+		{1200, 630, 50, image.Rect(0, 0, 1200, 630), 1200, 630},
+	} {
+		if got := cardCrop(c.w, c.h, c.pos); got != c.crop {
+			t.Errorf("cardCrop(%d, %d, %d) = %v, want %v", c.w, c.h, c.pos, got, c.crop)
+		}
+		if w, h := cardSize(c.w, c.h); w != c.sizeW || h != c.sizeH {
+			t.Errorf("cardSize(%d, %d) = %d×%d, want %d×%d", c.w, c.h, w, h, c.sizeW, c.sizeH)
+		}
+	}
+	if k := cardKey("/img/2026/11/x-cover.jpg", 30); k != "2026/11/x-cover-card30.jpg" {
+		t.Errorf("cardKey %q", k)
+	}
+	for _, c := range []string{"/img/2026/11/x.gif", "/img/2026/11/x.svg", "https://example.com/x.jpg", ""} {
+		if k := cardKey(c, 50); k != "" {
+			t.Errorf("cardKey(%q) = %q", c, k)
+		}
+	}
+}
+
+func TestCoverCards(t *testing.T) {
+	a := testApp(t)
+	ck := adminCookieFor(a)
+	post := func(path string, v url.Values) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("POST", path, strings.NewReader(v.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.AddCookie(ck)
+		return do(t, a, req)
+	}
+	im, err := a.addImage("photo.jpg", false, encodeJPEG(t, 1600, 1200, 0), time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// An upload whose own name looks like a card copy is not one.
+	odd, err := a.addImage("odd-card3.jpg", false, encodeJPEG(t, 300, 200, 0), time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cover := "/img/" + im.Key
+	exists := func(key string) bool { return fileExists(a.imagesDir, key) }
+	size := func(key string) (int, int) {
+		f, err := os.Open(filepath.Join(a.imagesDir, filepath.FromSlash(key)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		cfg, _, err := image.DecodeConfig(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg.Width, cfg.Height
+	}
+
+	rec := post("/admin/posts", url.Values{"title_en": {"Park"}, "body_en": {"x"}, "slug": {"park"}, "cover": {cover}, "cover_pos": {"0"}, "action": {"publish"}})
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("save: %d %s", rec.Code, rec.Body)
+	}
+	var p Post
+	a.store.view(func(d *Data) { p = *d.postBySlug("park") })
+	if p.CoverPos == nil || *p.CoverPos != 0 {
+		t.Fatalf("cover_pos %v", p.CoverPos)
+	}
+	card0 := cardKey(cover, 0)
+	if !exists(card0) {
+		t.Fatal("no card copy after saving")
+	}
+	if w, h := size(card0); w != 1440 || h != 756 {
+		t.Errorf("card copy %d×%d", w, h)
+	}
+	stem := strings.TrimSuffix(card0, ".jpg")
+	for _, f := range []string{stem + "-w600.jpg", stem + "-w1000.jpg"} {
+		if !exists(f) {
+			t.Errorf("no %s", f)
+		}
+	}
+	if w, h := size(stem + "-w600.jpg"); w != 600 || h != 315 {
+		t.Errorf("w600 copy %d×%d", w, h)
+	}
+	// The cut cover is what the post, the list and the feed show.
+	page := do(t, a, httptest.NewRequest("GET", "/park/", nil)).Body.String()
+	for _, want := range []string{
+		`<meta property="og:image" content="https://blog.example.com/img/` + card0 + `">`,
+		`<meta property="og:image:width" content="1440"><meta property="og:image:height" content="756">`,
+		`<img src="/img/` + card0 + `" srcset="/img/` + stem + `-w600.jpg 600w, /img/` + stem + `-w1000.jpg 1000w, /img/` + card0 + ` 1440w"`,
+		`data-pswp-width="1440" data-pswp-height="756"`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("post page lacks %s", want)
+		}
+	}
+	if strings.Contains(page, `src="`+cover+`"`) {
+		t.Error("the post page shows the uncut cover")
+	}
+	if home := do(t, a, httptest.NewRequest("GET", "/", nil)).Body.String(); !strings.Contains(home, `src="/img/`+card0+`"`) {
+		t.Error("the post list does not show the cut cover")
+	}
+	if feed := do(t, a, httptest.NewRequest("GET", "/rss/", nil)).Body.String(); !strings.Contains(feed, `https://blog.example.com/img/`+card0) {
+		t.Error("the feed does not show the cut cover")
+	}
+	if rec := do(t, a, httptest.NewRequest("GET", "/img/"+card0, nil)); rec.Code != 200 {
+		t.Errorf("card copy served %d", rec.Code)
+	}
+	thumb, ctype := a.coverThumb(&p)
+	if want, _ := os.ReadFile(filepath.Join(a.imagesDir, filepath.FromSlash(card0))); ctype != "image/jpeg" || !bytes.Equal(thumb, want) {
+		t.Errorf("Bluesky thumb is not the card copy (%s, %d bytes)", ctype, len(thumb))
+	}
+	editor := func() string {
+		req := httptest.NewRequest("GET", "/admin/posts/"+p.ID, nil)
+		req.AddCookie(ck)
+		return do(t, a, req).Body.String()
+	}
+	if !strings.Contains(editor(), `name="cover_pos" id="cover-pos" value="0"`) {
+		t.Error("editor lacks the frame position")
+	}
+
+	// Moving the frame makes a new copy and drops the old one; the centre
+	// is stored as no position.
+	post("/admin/posts/"+p.ID, url.Values{"title_en": {"Park"}, "body_en": {"x"}, "slug": {"park"}, "cover": {cover}, "cover_pos": {"50"}})
+	a.store.view(func(d *Data) { p = *d.postBySlug("park") })
+	if p.CoverPos != nil || !exists(cardKey(cover, 50)) || exists(card0) || exists(stem+"-w600.jpg") {
+		t.Errorf("after moving: pos %v, card50 %v, card0 %v", p.CoverPos, exists(cardKey(cover, 50)), exists(card0))
+	}
+	if !strings.Contains(editor(), `value="50"`) {
+		t.Error("editor lacks the centre position")
+	}
+	if !exists(odd.Key) {
+		t.Error("an upload named like a card copy was removed")
+	}
+
+	// make-cards rebuilds a missing copy.
+	os.Remove(filepath.Join(a.imagesDir, filepath.FromSlash(cardKey(cover, 50))))
+	t.Setenv("DATA_DIR", a.cfg.DataDir)
+	if err := runMakeCards(nil); err != nil {
+		t.Fatal(err)
+	}
+	if !exists(cardKey(cover, 50)) {
+		t.Error("make-cards made no copy")
+	}
+
+	// Without a cover the copy goes and og:image is absent.
+	post("/admin/posts/"+p.ID, url.Values{"title_en": {"Park"}, "body_en": {"x"}, "slug": {"park"}, "cover": {""}, "cover_pos": {"50"}})
+	if exists(cardKey(cover, 50)) || exists(strings.TrimSuffix(cardKey(cover, 50), ".jpg")+"-w1000.jpg") {
+		t.Error("card copy kept after the cover was removed")
+	}
+	if page := do(t, a, httptest.NewRequest("GET", "/park/", nil)).Body.String(); strings.Contains(page, "og:image") {
+		t.Error("og:image without a cover")
+	}
+}

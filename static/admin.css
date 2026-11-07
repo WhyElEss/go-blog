@@ -118,7 +118,14 @@ label.check input { width: auto; }
 .tag-menu li.on, .tag-menu li:hover { background: var(--soft); }
 .cover-field { display: flex; align-items: flex-end; gap: .5rem; flex-wrap: wrap; }
 .cover-field label { flex: 1; min-width: 200px; }
-#cover-preview { max-height: 90px; border-radius: 6px; }
+/* The cover with the link card's 1.91:1 frame on it; the frame's place
+   and size are set by admin.js in percent of the picture. */
+.cover-crop { position: relative; display: inline-block; line-height: 0; overflow: hidden; border-radius: 6px; touch-action: none; }
+#cover-preview { max-height: 180px; max-width: 100%; }
+.crop-frame { position: absolute; box-sizing: border-box; border: 2px solid #fff; box-shadow: 0 0 0 9999px rgba(0, 0, 0, .5); cursor: grab; }
+.crop-frame:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+.crop-frame.dragging { cursor: grabbing; }
+.crop-hint { flex-basis: 100%; color: var(--muted); }
 form.danger { margin-top: 2.5rem; }
 .syndicate { display: flex; flex-direction: column; gap: .3rem; padding: .75rem .9rem; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
 .syndicate p { margin: 0; }

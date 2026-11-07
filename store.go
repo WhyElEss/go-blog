@@ -28,11 +28,14 @@ type Post struct {
 	Body string `json:"body"`
 	// Excerpt is shown on the list and in link previews; empty means the
 	// start of the text.
-	Excerpt string   `json:"excerpt,omitempty"`
-	Cover   string   `json:"cover,omitempty"` // image URL, usually /img/...
-	Tags    []string `json:"tags,omitempty"`
-	Page    bool     `json:"page,omitempty"`
-	Draft   bool     `json:"draft,omitempty"`
+	Excerpt string `json:"excerpt,omitempty"`
+	Cover   string `json:"cover,omitempty"` // image URL, usually /img/...
+	// CoverPos places the link card's 1200:630 frame on the cover, 0–100
+	// along the side that is cut; nil is the centre (cards.go).
+	CoverPos *int     `json:"cover_pos,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
+	Page     bool     `json:"page,omitempty"`
+	Draft    bool     `json:"draft,omitempty"`
 	// Lang is the language of Title, Body and Excerpt (en, ru). Readers who
 	// want the other language get Translation when there is one, else this.
 	Lang        string       `json:"lang,omitempty"`

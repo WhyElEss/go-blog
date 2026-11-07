@@ -157,21 +157,19 @@ func (a *App) blueskyCardFor(p Post) blueskyCard {
 	if c.URL == postURL(&p) {
 		log.Printf("bluesky: BASE_URL is not set, the card links %s", c.URL)
 	}
-	c.Thumb, c.ThumbType = a.coverThumb(p.Cover)
+	c.Thumb, c.ThumbType = a.coverThumb(&p)
 	return c
 }
 
-// coverThumb reads the largest copy of an uploaded cover that the card
-// takes. Covers from other sites and SVGs go without a picture.
-func (a *App) coverThumb(cover string) ([]byte, string) {
-	key, ok := strings.CutPrefix(cover, "/img/")
+// coverThumb reads the largest copy of the post's cover (its cut copy,
+// cards.go, when there is one) that the card takes. Covers from other
+// sites and SVGs go without a picture.
+func (a *App) coverThumb(p *Post) ([]byte, string) {
+	im, _, ok := a.postCover(p)
 	if !ok {
 		return nil, ""
 	}
-	im, ok := a.store.image(key)
-	if !ok {
-		return nil, ""
-	}
+	key := im.Key
 	types := map[string]string{".jpg": "image/jpeg", ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp"}
 	ctype := types[strings.ToLower(path.Ext(key))]
 	if ctype == "" {
