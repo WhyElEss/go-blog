@@ -115,6 +115,9 @@
   .content .grow { display: contents; }
   .content .gallery .gi { flex-basis: calc(var(--n) * 5.5px); }
   .content .gallery::after { content: ""; flex: 1000 1 0; }
+  /* Set by gallery.js when the last line, filled, is not much taller
+     than the others. */
+  .content .gallery.fill-last::after { content: none; }
   /* A gallery of one short row (two or three pictures) stays a centred
      row, as on a wide screen, shrunk to fit if it has to. */
   .content .gallery > .grow.short:only-child { display: flex; flex: 1 1 100%; justify-content: center; }
