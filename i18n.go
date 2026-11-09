@@ -35,7 +35,6 @@ var messages = map[string][2]string{
 	"nav_newer":    {"Позже →", "Newer →"},
 	"discuss":      {"Обсудить запись можно в", "Comments are welcome on"},
 	"and":          {"и", "and"},
-	"share":        {"Поделиться:", "Share:"},
 	"share_copy":   {"Скопировать ссылку", "Copy link"},
 	"share_copied": {"Ссылка скопирована", "Link copied"},
 	"share_native": {"Поделиться", "Share"},

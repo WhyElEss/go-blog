@@ -1913,7 +1913,7 @@ func TestShareBox(t *testing.T) {
 		`href="https://t.me/share/url?url=` + link + `&amp;text=%D0%A0%D0%BE%D0%BA-%D0%BD-%D1%80%D0%BE%D0%BB%D0%BB"`,
 		`data-share-copy="https://blog.example.com/both/?lang=ru"`,
 		`data-share-title="Рок-н-ролл"`,
-		`Поделиться:`,
+		`class="share-mark"`,
 	} {
 		if !strings.Contains(b, want) {
 			t.Errorf("missing %s", want)

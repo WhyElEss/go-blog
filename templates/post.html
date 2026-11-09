@@ -16,7 +16,7 @@
 </article>
 {{with .Share}}
 <aside class="share" aria-label="{{t $.SiteLang "share_native"}}">
-  <span class="share-label">{{t $.SiteLang "share"}}</span>
+  <svg class="share-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m0 0L8 7m4-4 4 4M8 10H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-2"/></svg>
   <span class="share-wide">{{range .Links}}<a href="{{.URL}}" target="_blank" rel="noopener">{{.Icon}}{{.Name}}</a>{{end}}<button type="button" class="share-copy" data-share-copy="{{.URL}}" data-done="{{t $.SiteLang "share_copied"}}" hidden>{{linkIcon}}<span>{{t $.SiteLang "share_copy"}}</span></button></span>
   <button type="button" class="share-native" data-share-title="{{.Title}}" data-share-link="{{.URL}}" hidden>{{shareIcon}}{{t $.SiteLang "share_native"}}</button>
 </aside>
