@@ -283,8 +283,10 @@ func (a *App) handleFavicon(w http.ResponseWriter, r *http.Request) {
 }
 
 var templateFuncs = template.FuncMap{
-	"t":       t,
-	"rssIcon": func() template.HTML { return iconRSS },
+	"t":         t,
+	"rssIcon":   func() template.HTML { return iconRSS },
+	"linkIcon":  func() template.HTML { return iconLink },
+	"shareIcon": func() template.HTML { return iconShare },
 	// newTab opens a link to another site in a new tab. Menu links to the
 	// blog itself are written as paths, so any full web address is outside.
 	"newTab": func(u string) template.HTMLAttr {

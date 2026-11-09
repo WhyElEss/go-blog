@@ -50,6 +50,12 @@ renders a page in a few milliseconds.
 - **Comments elsewhere**: under every post, links to the author's Bluesky,
   Mastodon and X profiles (set in the settings; empty ones left out) and to
   the RSS feed, with the real brand marks from Simple Icons, inline.
+- **Share box** under each published post: plain links that open a new
+  post on Bluesky, X, Facebook or Telegram with the post's title and
+  address (in the language being read), plus Copy link. On touch screens
+  with a share sheet it is a single Share button that opens the phone's
+  own sheet. No scripts or trackers from the networks: nothing is sent
+  anywhere until the reader clicks.
 - **Posts and pages**: drafts, scheduled publication, tags with their own
   pages, standalone pages (About, Contact) outside the feed.
 - **Two languages, one URL**: a post can have both an English and a Russian

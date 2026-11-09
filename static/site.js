@@ -18,6 +18,31 @@
     });
   }
 
+  // Share box under a post: on a touch screen with a share sheet, one
+  // button that opens it; elsewhere the network links plus Copy link.
+  const share = document.querySelector(".share");
+  if (share) {
+    const native = share.querySelector(".share-native");
+    const copy = share.querySelector(".share-copy");
+    if (navigator.share && window.matchMedia("(pointer: coarse)").matches) {
+      share.classList.add("native");
+      native.hidden = false;
+      native.addEventListener("click", () => {
+        navigator.share({ title: native.dataset.shareTitle, url: native.dataset.shareLink }).catch(() => {});
+      });
+    } else if (navigator.clipboard) {
+      copy.hidden = false;
+      const label = copy.querySelector("span");
+      const text = label.textContent;
+      copy.addEventListener("click", () => {
+        navigator.clipboard.writeText(copy.dataset.shareCopy).then(() => {
+          label.textContent = copy.dataset.done;
+          setTimeout(() => (label.textContent = text), 2000);
+        });
+      });
+    }
+  }
+
   // Phones only: the two-row header leaves on the way down, returns on the
   // way up.
   const head = document.querySelector(".site-head");

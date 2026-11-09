@@ -1885,3 +1885,49 @@ func TestCoverCards(t *testing.T) {
 		t.Error("og:image without a cover")
 	}
 }
+
+func TestShareBox(t *testing.T) {
+	a := testApp(t)
+	a.store.update(func(d *Data) error {
+		d.Posts = append(d.Posts,
+			&Post{ID: "1", Slug: "both", Title: "Rock & Roll", Body: "x", Lang: "en", PublishedAt: time.Now().Add(-time.Hour),
+				Translation: &Translation{Title: "Рок-н-ролл", Body: "x"}},
+			&Post{ID: "2", Slug: "one", Title: "One", Body: "x", Lang: "en", PublishedAt: time.Now().Add(-time.Hour)},
+			&Post{ID: "3", Slug: "later", Title: "Later", Body: "x", Lang: "en", PublishedAt: time.Now().Add(time.Hour)},
+			&Post{ID: "4", Slug: "about", Title: "About", Body: "x", Lang: "en", Page: true, PublishedAt: time.Now().Add(-time.Hour)})
+		return nil
+	})
+	get := func(path string, admin bool) string {
+		req := httptest.NewRequest("GET", path, nil)
+		if admin {
+			req.AddCookie(adminCookieFor(a))
+		}
+		return do(t, a, req).Body.String()
+	}
+	b := get("/both/?lang=ru", false)
+	link := "https%3A%2F%2Fblog.example.com%2Fboth%2F%3Flang%3Dru"
+	for _, want := range []string{
+		`href="https://bsky.app/intent/compose?text=%D0%A0%D0%BE%D0%BA-%D0%BD-%D1%80%D0%BE%D0%BB%D0%BB%20` + link + `"`,
+		`href="https://x.com/intent/tweet?text=%D0%A0%D0%BE%D0%BA-%D0%BD-%D1%80%D0%BE%D0%BB%D0%BB&amp;url=` + link + `"`,
+		`href="https://www.facebook.com/sharer/sharer.php?u=` + link + `"`,
+		`href="https://t.me/share/url?url=` + link + `&amp;text=%D0%A0%D0%BE%D0%BA-%D0%BD-%D1%80%D0%BE%D0%BB%D0%BB"`,
+		`data-share-copy="https://blog.example.com/both/?lang=ru"`,
+		`data-share-title="Рок-н-ролл"`,
+		`Поделиться:`,
+	} {
+		if !strings.Contains(b, want) {
+			t.Errorf("missing %s", want)
+		}
+	}
+	if b := get("/both/?lang=en", false); !strings.Contains(b, `text=Rock%20%26%20Roll&amp;url=https%3A%2F%2Fblog.example.com%2Fboth%2F%3Flang%3Den"`) {
+		t.Error("English title or link")
+	}
+	if b := get("/one/", false); !strings.Contains(b, `data-share-copy="https://blog.example.com/one/"`) {
+		t.Error("one language: no ?lang=")
+	}
+	for _, p := range []string{"/later/", "/about/"} {
+		if strings.Contains(get(p, true), `class="share"`) {
+			t.Errorf("%s: share box on a scheduled post or a page", p)
+		}
+	}
+}

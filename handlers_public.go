@@ -259,6 +259,8 @@ type postPage struct {
 	EditURL string
 	// Social lists the profiles for the box under a post.
 	Social []socialLink
+	// Share is the "share" box under a live post (share.go).
+	Share *sharePost
 	// CoverZoom is the cover link's attributes for the gallery. It is
 	// written in Go: html/template would treat data-pswp-srcset, a name
 	// with "src" in it, as a URL and escape its spaces and commas.
@@ -353,6 +355,14 @@ func (a *App) handlePost(w http.ResponseWriter, r *http.Request, slug string) {
 	}
 	if !p.Page {
 		a.store.view(func(d *Data) { data.Social = socialLinks(d.Settings, lang) })
+		if p.live(now) {
+			// The link keeps the language being read, when there are two.
+			link := data.Origin + postURL(&p)
+			if p.Translation != nil {
+				link += "?lang=" + v.Lang
+			}
+			data.Share = shareFor(link, v.Title)
+		}
 	}
 	if c := data.Post; c.CoverW > 0 {
 		esc := html.EscapeString
