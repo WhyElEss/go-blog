@@ -86,7 +86,7 @@ func (a *App) pageBase(r *http.Request, title string) pageBase {
 		Path: r.URL.Path, Origin: a.origin(r), FeedURL: "/rss/", OGType: "website", Admin: a.isAdmin(r), Version: version, Year: a.now().Year(),
 	}
 	b.Logo, b.LogoDark = a.imgSrc(b.Logo), a.imgSrc(b.LogoDark)
-	// The site's link-preview card (tools/og-card.swift), cached a year
+	// The site's link-preview card (tools/icons.swift), cached a year
 	// under the build version like every /static/ file.
 	b.OGImage, b.OGImageW, b.OGImageH, b.OGImageAlt = b.Origin+"/static/og.png?v="+version, 1200, 630, s.Title
 	b.Creator = fediverseHandle(s.Mastodon)
