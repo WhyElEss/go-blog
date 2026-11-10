@@ -463,10 +463,12 @@
     setFramePos(Number(framePos.value) + step);
   });
   // A new cover starts with the frame in the centre.
-  const showCover = () => {
+  // src is the new upload's address with its version, so the preview
+  // shows it and not a cached picture under the same name.
+  const showCover = (src) => {
     framePos.value = 50;
     coverCrop.hidden = !cover.value;
-    if (cover.value) coverPreview.src = cover.value;
+    if (cover.value) coverPreview.src = typeof src === "string" ? src : cover.value;
     placeFrame();
   };
   cover.addEventListener("input", showCover);
@@ -479,10 +481,10 @@
   };
   $("[data-cover-upload]").addEventListener("click", async () => {
     const file = await pickFile();
-    const { url } = await upload(file, coverName());
+    const { url, src } = await upload(file, coverName());
     cover.value = url;
     dirty = true;
-    showCover();
+    showCover(src);
   });
   $("[data-cover-clear]").addEventListener("click", () => {
     cover.value = "";

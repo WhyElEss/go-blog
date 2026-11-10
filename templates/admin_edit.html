@@ -74,7 +74,7 @@
       <button type="button" class="btn" data-cover-upload>{{t .Lang "upload"}}</button>
       <button type="button" class="btn" data-cover-clear>{{t .Lang "remove"}}</button>
       <div class="cover-crop" id="cover-crop"{{if not .Post.Cover}} hidden{{end}}>
-        <img id="cover-preview" alt=""{{if .Post.Cover}} src="{{.Post.Cover}}"{{end}}>
+        <img id="cover-preview" alt=""{{if .Post.Cover}} src="{{.CoverSrc}}"{{end}}>
         <div class="crop-frame" id="cover-frame" tabindex="0" role="slider" aria-label="{{t .Lang "cover_frame"}}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{.CoverPos}}" hidden></div>
       </div>
       <input type="hidden" name="cover_pos" id="cover-pos" value="{{.CoverPos}}">

@@ -82,6 +82,7 @@ func (a *App) pageBase(r *http.Request, title string) pageBase {
 		Logo: s.Logo, LogoDark: s.LogoDark, Nav: localLinks(s.Nav, lang, s.Lang), FooterNav: localLinks(s.FooterNav, lang, s.Lang), Mastodon: s.Mastodon,
 		Path: r.URL.Path, Origin: a.origin(r), FeedURL: "/rss/", OGType: "website", Admin: a.isAdmin(r), Version: version, Year: a.now().Year(),
 	}
+	b.Logo, b.LogoDark = a.imgSrc(b.Logo), a.imgSrc(b.LogoDark)
 	b.Creator = fediverseHandle(s.Mastodon)
 	if lang != normLang(s.Lang) {
 		b.FeedURL = "/rss/" + lang + "/"
@@ -138,7 +139,7 @@ func (a *App) toCard(p Post, v postText, uiLang string, now time.Time) card {
 		c.Tags = append(c.Tags, tagLink{Name: tg, URL: "/tag/" + tagSlug(tg) + "/"})
 	}
 	if im, _, ok := a.postCover(&p); ok {
-		c.Cover = "/img/" + im.Key
+		c.Cover = imageURL(im, im.Width)
 		c.CoverW, c.CoverH, c.CoverSrcset = im.Width, im.Height, srcset(im)
 	}
 	return c
@@ -337,7 +338,7 @@ func (a *App) handlePost(w http.ResponseWriter, r *http.Request, slug string) {
 	if p.Cover != "" {
 		data.OGImage = absURL(data.Origin, p.Cover)
 		if im, cut, _ := a.postCover(&p); cut {
-			data.OGImage, data.OGImageW, data.OGImageH = absURL(data.Origin, "/img/"+im.Key), im.Width, im.Height
+			data.OGImage, data.OGImageW, data.OGImageH = absURL(data.Origin, imageURL(im, im.Width)), im.Width, im.Height
 		}
 	}
 	if older != nil {

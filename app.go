@@ -275,7 +275,7 @@ func (a *App) handleFavicon(w http.ResponseWriter, r *http.Request) {
 	var icon string
 	a.store.view(func(d *Data) { icon = d.Settings.Icon })
 	if icon != "" {
-		http.Redirect(w, r, icon, http.StatusFound)
+		http.Redirect(w, r, a.imgSrc(icon), http.StatusFound)
 		return
 	}
 	w.Header().Set("Cache-Control", "public, max-age=86400")

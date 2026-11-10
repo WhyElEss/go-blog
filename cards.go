@@ -83,7 +83,7 @@ func cardImage(im Image, pos int) (c Image, ok bool) {
 		return Image{}, false
 	}
 	w, h := cardSize(im.Width, im.Height)
-	return Image{Key: ck, Width: w, Height: h, Widths: copyWidths(w)}, true
+	return Image{Key: ck, Width: w, Height: h, Widths: copyWidths(w), Uploaded: im.Uploaded}, true
 }
 
 // makeCard writes the cut copy of an uploaded cover at pos and its smaller
@@ -93,9 +93,16 @@ func makeCard(dir string, im Image, pos int) error {
 	if !ok {
 		return nil
 	}
+	// A cut older than its cover was made from an earlier upload under
+	// the same name: make it again.
 	have := true
+	srcInfo, err := os.Stat(filepath.Join(dir, filepath.FromSlash(im.Key)))
+	if err != nil {
+		return err
+	}
 	for _, f := range imageFiles(&c, c.Key) {
-		if !fileExists(dir, f) {
+		st, err := os.Stat(filepath.Join(dir, filepath.FromSlash(f)))
+		if err != nil || st.ModTime().Before(srcInfo.ModTime()) {
 			have = false
 		}
 	}

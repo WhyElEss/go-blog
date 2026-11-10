@@ -158,7 +158,8 @@ type editPage struct {
 	AllTags   []string // every tag in use, most used first, to pick from
 	DateValue string   // datetime-local
 	Live      bool
-	CoverPos  int // the link card's frame on the cover (cards.go)
+	CoverPos  int    // the link card's frame on the cover (cards.go)
+	CoverSrc  string // the cover with its version, for the preview
 }
 
 // editTab is the editor's text fields for one language.
@@ -181,6 +182,7 @@ func (a *App) editData(r *http.Request, p Post, isNew bool) editPage {
 	e := editPage{adminBase: a.adminBase(r, title), Post: p, New: isNew, TagsText: strings.Join(p.Tags, ", "), Live: p.live(a.now())}
 	e.Post.Lang = normLang(p.Lang)
 	e.CoverPos = coverPos(&p)
+	e.CoverSrc = a.imgSrc(p.Cover)
 	a.store.view(func(d *Data) {
 		for _, row := range d.tagRows() {
 			e.AllTags = append(e.AllTags, row.Name)
@@ -482,7 +484,9 @@ func (a *App) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"url": "/img/" + im.Key, "width": im.Width, "height": im.Height})
+	// url goes into texts and fields; src, with the version, is for showing
+	// the new upload right away (imageVersion).
+	json.NewEncoder(w).Encode(map[string]any{"url": "/img/" + im.Key, "src": imageURL(*im, im.Width), "width": im.Width, "height": im.Height})
 }
 
 // addImage processes an upload and records it. Holding the store lock
@@ -540,7 +544,7 @@ func (a *App) handleImages(w http.ResponseWriter, r *http.Request) {
 	a.store.view(func(d *Data) {
 		for _, im := range d.Images {
 			data.Images = append(data.Images, imageRow{
-				Image: *im, URL: "/img/" + im.Key, Thumb: variantURL(im.Key, im.Width, im.Widths[0]),
+				Image: *im, URL: imageURL(*im, im.Width), Thumb: imageURL(*im, im.Widths[0]),
 				Markdown: "![](/img/" + im.Key + ")", Size: humanBytes(im.Bytes), Uses: d.imageUses(im.Key),
 			})
 		}

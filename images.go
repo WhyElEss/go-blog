@@ -46,6 +46,35 @@ func variantURL(key string, full, w int) string {
 	return fmt.Sprintf("/img/%s-w%d%s", strings.TrimSuffix(key, ext), w, ext)
 }
 
+// imageVersion is the query that tells one upload under a name from the
+// next: /img/ answers are cached for a year as immutable (handleImage), so
+// a picture deleted and uploaded again under the same name ("<slug>-cover")
+// must have a new address for browsers and Cloudflare to fetch it. Names
+// stay as they are; texts and fields keep the plain /img/ URL and pages
+// get it with ?v=<upload time>.
+func imageVersion(im Image) string {
+	if im.Uploaded.IsZero() {
+		return ""
+	}
+	return "?v=" + strconv.FormatInt(im.Uploaded.UnixMilli(), 36)
+}
+
+// imageURL is the address pages use for the copy of im at width w.
+func imageURL(im Image, w int) string {
+	return variantURL(im.Key, im.Width, w) + imageVersion(im)
+}
+
+// imgSrc gives an /img/ URL of a known upload its version; anything else
+// is returned as it is. Call it outside the store lock.
+func (a *App) imgSrc(u string) string {
+	if key, ok := strings.CutPrefix(u, "/img/"); ok {
+		if im, ok := a.store.image(key); ok {
+			return u + imageVersion(im)
+		}
+	}
+	return u
+}
+
 // imageName makes a file name stem from an upload's name, without image
 // extensions ("photo.jpg.webp" → "photo").
 func imageName(name string) string {

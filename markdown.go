@@ -317,7 +317,7 @@ var imageSizes = map[string]string{
 func srcset(im Image) string {
 	var set []string
 	for _, wd := range im.Widths {
-		set = append(set, fmt.Sprintf("%s %dw", variantURL(im.Key, im.Width, wd), wd))
+		set = append(set, fmt.Sprintf("%s %dw", imageURL(im, wd), wd))
 	}
 	return strings.Join(set, ", ")
 }
@@ -331,6 +331,9 @@ func (r *imageRenderer) writeImg(w util.BufWriter, src, alt, title, sizes string
 	known := false
 	if key, ok := strings.CutPrefix(src, "/img/"); ok && r.lookup != nil {
 		im, known = r.lookup(key)
+	}
+	if known {
+		src = imageURL(im, im.Width)
 	}
 	if known && zoom {
 		fmt.Fprintf(w, `<a class="zoom" href="%s" data-pswp-width="%d" data-pswp-height="%d"`, esc(src), im.Width, im.Height)

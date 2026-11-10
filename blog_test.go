@@ -1815,12 +1815,14 @@ func TestCoverCards(t *testing.T) {
 	if w, h := size(stem + "-w600.jpg"); w != 600 || h != 315 {
 		t.Errorf("w600 copy %d×%d", w, h)
 	}
-	// The cut cover is what the post, the list and the feed show.
+	// The cut cover is what the post, the list and the feed show, with the
+	// cover's upload version.
+	v := imageVersion(*im)
 	page := do(t, a, httptest.NewRequest("GET", "/park/", nil)).Body.String()
 	for _, want := range []string{
-		`<meta property="og:image" content="https://blog.example.com/img/` + card0 + `">`,
+		`<meta property="og:image" content="https://blog.example.com/img/` + card0 + v + `">`,
 		`<meta property="og:image:width" content="1440"><meta property="og:image:height" content="756">`,
-		`<img src="/img/` + card0 + `" srcset="/img/` + stem + `-w600.jpg 600w, /img/` + stem + `-w1000.jpg 1000w, /img/` + card0 + ` 1440w"`,
+		`<img src="/img/` + card0 + v + `" srcset="/img/` + stem + `-w600.jpg` + v + ` 600w, /img/` + stem + `-w1000.jpg` + v + ` 1000w, /img/` + card0 + v + ` 1440w"`,
 		`data-pswp-width="1440" data-pswp-height="756"`,
 	} {
 		if !strings.Contains(page, want) {
@@ -1830,7 +1832,7 @@ func TestCoverCards(t *testing.T) {
 	if strings.Contains(page, `src="`+cover+`"`) {
 		t.Error("the post page shows the uncut cover")
 	}
-	if home := do(t, a, httptest.NewRequest("GET", "/", nil)).Body.String(); !strings.Contains(home, `src="/img/`+card0+`"`) {
+	if home := do(t, a, httptest.NewRequest("GET", "/", nil)).Body.String(); !strings.Contains(home, `src="/img/`+card0+v+`"`) {
 		t.Error("the post list does not show the cut cover")
 	}
 	if feed := do(t, a, httptest.NewRequest("GET", "/rss/", nil)).Body.String(); !strings.Contains(feed, `https://blog.example.com/img/`+card0) {
@@ -1929,5 +1931,80 @@ func TestShareBox(t *testing.T) {
 		if strings.Contains(get(p, true), `class="share"`) {
 			t.Errorf("%s: share box on a scheduled post or a page", p)
 		}
+	}
+}
+
+// A picture deleted and uploaded again gets its old name back, and pages
+// must show the new one: /img/ is cached for a year, so its address
+// carries the upload's version.
+func TestReuploadSameName(t *testing.T) {
+	a := testApp(t)
+	ck := adminCookieFor(a)
+	upload := func(w, h int) (url, src string) {
+		var buf bytes.Buffer
+		mw := multipart.NewWriter(&buf)
+		mw.WriteField("name", "vinyl-collection-cover")
+		fw, _ := mw.CreateFormFile("file", "IMG_1.jpg")
+		fw.Write(encodeJPEG(t, w, h, 0))
+		mw.Close()
+		req := httptest.NewRequest("POST", "/admin/upload", &buf)
+		req.Header.Set("Content-Type", mw.FormDataContentType())
+		req.AddCookie(ck)
+		rec := do(t, a, req)
+		var res struct{ URL, Src string }
+		json.Unmarshal(rec.Body.Bytes(), &res)
+		if rec.Code != 200 {
+			t.Fatalf("upload: %d %s", rec.Code, rec.Body)
+		}
+		return res.URL, res.Src
+	}
+	post := func(path string, v url.Values) {
+		req := httptest.NewRequest("POST", path, strings.NewReader(v.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.AddCookie(ck)
+		do(t, a, req)
+	}
+	url1, src1 := upload(1200, 800)
+	if !strings.HasPrefix(src1, url1+"?v=") {
+		t.Fatalf("upload src %q for %q", src1, url1)
+	}
+	post("/admin/posts", url.Values{"title_en": {"Vinyl"}, "body_en": {"x"}, "slug": {"vinyl-collection"}, "cover": {url1}, "action": {"publish"}})
+	var p Post
+	a.store.view(func(d *Data) { p = *d.postBySlug("vinyl-collection") })
+	cut1, _, _ := a.postCover(&p)
+
+	// Remove the cover, delete the picture, upload another one.
+	post("/admin/posts/"+p.ID, url.Values{"title_en": {"Vinyl"}, "body_en": {"x"}, "slug": {"vinyl-collection"}, "cover": {""}})
+	form := url.Values{"key": {strings.TrimPrefix(url1, "/img/")}}
+	req := httptest.NewRequest("POST", "/admin/images/delete", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(ck)
+	do(t, a, req)
+	time.Sleep(5 * time.Millisecond) // another upload time
+	url2, src2 := upload(1600, 900)
+	if url2 != url1 {
+		t.Fatalf("name changed: %s → %s", url1, url2)
+	}
+	if src2 == src1 {
+		t.Fatal("the new upload has the old address")
+	}
+	post("/admin/posts/"+p.ID, url.Values{"title_en": {"Vinyl"}, "body_en": {"x"}, "slug": {"vinyl-collection"}, "cover": {url2}})
+	a.store.view(func(d *Data) { p = *d.postBySlug("vinyl-collection") })
+	cut2, _, _ := a.postCover(&p)
+	if cut2.Key != cut1.Key || imageVersion(cut2) == imageVersion(cut1) {
+		t.Fatalf("cut %s%s, before %s%s", cut2.Key, imageVersion(cut2), cut1.Key, imageVersion(cut1))
+	}
+	page := do(t, a, httptest.NewRequest("GET", "/vinyl-collection/", nil)).Body.String()
+	if !strings.Contains(page, `src="/img/`+cut2.Key+imageVersion(cut2)+`"`) || strings.Contains(page, imageVersion(cut1)) {
+		t.Error("the post page shows the old upload's address")
+	}
+	req = httptest.NewRequest("GET", "/admin/posts/"+p.ID, nil)
+	req.AddCookie(ck)
+	if ed := do(t, a, req).Body.String(); !strings.Contains(ed, `src="`+src2+`"`) {
+		t.Error("the editor preview lacks the new upload's address")
+	}
+	// The address with the version serves the file.
+	if rec := do(t, a, httptest.NewRequest("GET", src2, nil)); rec.Code != 200 {
+		t.Errorf("versioned address: %d", rec.Code)
 	}
 }

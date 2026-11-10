@@ -25,6 +25,10 @@ renders a page in a few milliseconds.
   while the URL field is empty), e.g. `halloween-candies-cover.jpg`,
   `halloween-candies-01.jpg`. Images uploaded on the library page or in
   Settings keep their own names.
+  A picture deleted and uploaded again gets its old name back; pages
+  address every upload with its upload time (`…/x.jpg?v=…`), so the new
+  picture shows at once although `/img/` is cached for a year. Texts and
+  fields keep the plain `/img/` address.
 - **Covers** are 1.91:1 everywhere, the shape of link cards on Bluesky,
   Facebook and elsewhere: on the post page, in the post list and in
   `og:image` and the Bluesky card. A frame over the uploaded cover in the

@@ -112,7 +112,7 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 		if p.Cover != "" {
 			cover := p.Cover
 			if im, _, ok := a.postCover(&p); ok {
-				cover = "/img/" + im.Key
+				cover = imageURL(im, im.Width)
 			}
 			it.Encoded.Value = `<p><img src="` + absURL(origin, cover) + `" alt=""></p>` + it.Encoded.Value
 		}
