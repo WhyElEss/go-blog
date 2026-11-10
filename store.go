@@ -122,7 +122,7 @@ type Settings struct {
 	FooterNav []Link `json:"footer_nav,omitempty"`
 	Logo      string `json:"logo,omitempty"`      // image URL; empty shows the title
 	LogoDark  string `json:"logo_dark,omitempty"` // logo for dark mode; empty uses Logo
-	Icon      string `json:"icon,omitempty"`      // square image URL for the favicon
+	Icon      string `json:"icon,omitempty"`      // the uploaded square icon the built-in icons are drawn from (tools/icons.swift); not served since 2026-11-10
 	// Profiles linked under every post for comments; empty ones are left out.
 	Bluesky      string `json:"bluesky,omitempty"`
 	Mastodon     string `json:"mastodon,omitempty"`

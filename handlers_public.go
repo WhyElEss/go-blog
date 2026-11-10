@@ -32,10 +32,13 @@ type pageBase struct {
 	Origin  string
 	FeedURL string // the feed in SiteLang
 	OGTitle string
-	OGImage string // absolute URL
-	// OGImageW and OGImageH are the cut cover's size (cards.go), 0 when
-	// og:image is the cover as uploaded.
+	// OGImage is an absolute URL: the site's card (static/og.png) unless
+	// the page has a picture of its own. OGImageW and OGImageH are its
+	// size, 0 when unknown (a cover as uploaded); OGImageAlt is said only
+	// for the site's card.
+	OGImage            string
 	OGImageW, OGImageH int
+	OGImageAlt         string
 	OGType             string
 	Admin              bool
 	Version            string
@@ -83,6 +86,9 @@ func (a *App) pageBase(r *http.Request, title string) pageBase {
 		Path: r.URL.Path, Origin: a.origin(r), FeedURL: "/rss/", OGType: "website", Admin: a.isAdmin(r), Version: version, Year: a.now().Year(),
 	}
 	b.Logo, b.LogoDark = a.imgSrc(b.Logo), a.imgSrc(b.LogoDark)
+	// The site's link-preview card (tools/og-card.swift), cached a year
+	// under the build version like every /static/ file.
+	b.OGImage, b.OGImageW, b.OGImageH, b.OGImageAlt = b.Origin+"/static/og.png?v="+version, 1200, 630, s.Title
 	b.Creator = fediverseHandle(s.Mastodon)
 	if lang != normLang(s.Lang) {
 		b.FeedURL = "/rss/" + lang + "/"
@@ -336,7 +342,7 @@ func (a *App) handlePost(w http.ResponseWriter, r *http.Request, slug string) {
 	data.Description = a.textExcerpt(v)
 	data.OGType = "article"
 	if p.Cover != "" {
-		data.OGImage = absURL(data.Origin, p.Cover)
+		data.OGImage, data.OGImageW, data.OGImageH, data.OGImageAlt = absURL(data.Origin, p.Cover), 0, 0, ""
 		if im, cut, _ := a.postCover(&p); cut {
 			data.OGImage, data.OGImageW, data.OGImageH = absURL(data.Origin, imageURL(im, im.Width)), im.Width, im.Height
 		}

@@ -179,7 +179,6 @@ var messages = map[string][2]string{
 	"nav_hint":         {"По строке: Название | /адрес/ или Название | Перевод | /адрес/", "One per line: Label | /url/ or Label | Translated label | /url/"},
 	"logo":             {"Логотип", "Logo"},
 	"logo_dark":        {"Логотип для тёмной темы", "Logo for dark mode"},
-	"icon":             {"Иконка сайта (квадратная)", "Site icon (square)"},
 	"profiles":         {"Профили для обсуждения", "Profiles for comments"},
 	"profiles_hint":    {"Ссылки под каждой записью, вместе с RSS; Mastodon ещё и в подвале, с rel=\"me\" для подтверждения в профиле. Пустое поле не показывается; нет ни одного — нет и блока.", "Linked under every post, together with RSS; Mastodon also in the footer, with rel=\"me\" for verification on the profile. Empty fields are left out; with none, there is no box."},
 	"tags_manage":      {"Теги", "Tags"},

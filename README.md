@@ -29,6 +29,15 @@ renders a page in a few milliseconds.
   address every upload with its upload time (`…/x.jpg?v=…`), so the new
   picture shows at once although `/img/` is cached for a year. Texts and
   fields keep the plain `/img/` address.
+- **Icons** in the style of the owner's other sites: `static/icon.svg`,
+  `favicon-32.png`, `/favicon.ico` and a 180×180 `/apple-touch-icon.png`
+  for Safari Favorites and the iOS home screen, drawn on a Mac by
+  `tools/icons.swift` from the blog's record-and-maple-leaf icon (the
+  leaf is traced from it). The site icon is no longer a setting.
+- **Site card**: the home page, tag pages and posts without a cover share
+  a 1200×630 card (`static/og.png`: "Maple & Vinyl", the tagline, the
+  domain and the record-and-maple-leaf icon), drawn on a Mac by
+  `tools/og-card.swift` (how to run it is at the top of the file).
 - **Covers** are 1.91:1 everywhere, the shape of link cards on Bluesky,
   Facebook and elsewhere: on the post page, in the post list and in
   `og:image` and the Bluesky card. A frame over the uploaded cover in the

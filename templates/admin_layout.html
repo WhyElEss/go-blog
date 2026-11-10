@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>{{.Title}} — {{.SiteTitle}}</title>
-<link rel="icon" href="/favicon.ico">
+<link rel="icon" href="/static/icon.svg?v={{.Version}}" type="image/svg+xml">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v={{.Version}}">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/static/content.css?v={{.Version}}">
 <link rel="stylesheet" href="/static/admin.css?v={{.Version}}">
 <script src="/static/admin.js?v={{.Version}}" defer></script>

@@ -74,5 +74,5 @@ func headingID(s string) string {
 // reservedSlugs are paths the blog itself uses at the top level.
 var reservedSlugs = map[string]bool{
 	"admin": true, "tag": true, "page": true, "rss": true, "img": true, "static": true,
-	"healthz": true, "lang": true, "robots-txt": true, "sitemap-xml": true, "favicon-ico": true, "content": true,
+	"healthz": true, "lang": true, "robots-txt": true, "sitemap-xml": true, "favicon-ico": true, "apple-touch-icon-png": true, "content": true,
 }

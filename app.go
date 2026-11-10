@@ -97,7 +97,14 @@ func (a *App) routes() http.Handler {
 	mux.Handle("GET /static/", staticCache(http.StripPrefix("/static/", http.FileServerFS(static))))
 	mux.HandleFunc("GET /img/{path...}", a.handleImage)
 	mux.HandleFunc("GET /content/images/{path...}", a.handleOldImage)
-	mux.HandleFunc("GET /favicon.ico", a.handleFavicon)
+	// Icons at the addresses browsers and iOS ask for without a link; no
+	// version in these names, so a day's cache (tools/icons.swift).
+	for _, name := range []string{"favicon.ico", "apple-touch-icon.png"} {
+		mux.HandleFunc("GET /"+name, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Cache-Control", "public, max-age=86400")
+			http.ServeFileFS(w, r, static, name)
+		})
+	}
 	mux.HandleFunc("GET /robots.txt", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Write([]byte("User-agent: *\nDisallow: /admin/\n\nSitemap: " + a.origin(r) + "/sitemap.xml\n"))
@@ -269,17 +276,6 @@ func (a *App) handleOldImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/img/"+key, http.StatusMovedPermanently)
-}
-
-func (a *App) handleFavicon(w http.ResponseWriter, r *http.Request) {
-	var icon string
-	a.store.view(func(d *Data) { icon = d.Settings.Icon })
-	if icon != "" {
-		http.Redirect(w, r, a.imgSrc(icon), http.StatusFound)
-		return
-	}
-	w.Header().Set("Cache-Control", "public, max-age=86400")
-	http.ServeFileFS(w, r, assets, "static/favicon.svg")
 }
 
 var templateFuncs = template.FuncMap{

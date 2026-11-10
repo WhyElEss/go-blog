@@ -1883,8 +1883,8 @@ func TestCoverCards(t *testing.T) {
 	if exists(cardKey(cover, 50)) || exists(strings.TrimSuffix(cardKey(cover, 50), ".jpg")+"-w1000.jpg") {
 		t.Error("card copy kept after the cover was removed")
 	}
-	if page := do(t, a, httptest.NewRequest("GET", "/park/", nil)).Body.String(); strings.Contains(page, "og:image") {
-		t.Error("og:image without a cover")
+	if page := do(t, a, httptest.NewRequest("GET", "/park/", nil)).Body.String(); !strings.Contains(page, `/static/og.png?v=`) {
+		t.Error("a post without a cover does not show the site's card")
 	}
 }
 
@@ -2007,4 +2007,83 @@ func TestReuploadSameName(t *testing.T) {
 	if rec := do(t, a, httptest.NewRequest("GET", src2, nil)); rec.Code != 200 {
 		t.Errorf("versioned address: %d", rec.Code)
 	}
+}
+
+// Pages without a picture of their own share the site's card.
+func TestSiteCard(t *testing.T) {
+	a := testApp(t)
+	home := do(t, a, httptest.NewRequest("GET", "/", nil)).Body.String()
+	want := `<meta property="og:image" content="https://blog.example.com/static/og.png?v=` + version + `"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="`
+	if !strings.Contains(home, want) || !strings.Contains(home, `<meta name="twitter:card" content="summary_large_image">`) {
+		t.Errorf("home page lacks the site card\n%s", home)
+	}
+	rec := do(t, a, httptest.NewRequest("GET", "/static/og.png?v="+version, nil))
+	if rec.Code != 200 || rec.Header().Get("Content-Type") != "image/png" {
+		t.Fatalf("og.png: %d %s", rec.Code, rec.Header().Get("Content-Type"))
+	}
+	cfg, err := png.DecodeConfig(rec.Body)
+	if err != nil || cfg.Width != 1200 || cfg.Height != 630 {
+		t.Errorf("og.png %d×%d %v", cfg.Width, cfg.Height, err)
+	}
+	// A cover that has no cut copy is og:image without a size or the
+	// card's alt text.
+	a.store.update(func(d *Data) error {
+		d.Posts = append(d.Posts, &Post{ID: "p1", Slug: "gif", Title: "Gif", Body: "x", Cover: "https://example.com/x.gif", PublishedAt: time.Now().Add(-time.Hour)})
+		return nil
+	})
+	page := do(t, a, httptest.NewRequest("GET", "/gif/", nil)).Body.String()
+	if !strings.Contains(page, `<meta property="og:image" content="https://example.com/x.gif"><meta name="twitter:card"`) {
+		t.Errorf("a post's own cover\n%s", page)
+	}
+}
+
+// The built-in icons: at the addresses browsers and iOS ask for, and
+// linked from every page; saving settings keeps the old icon upload.
+func TestIcons(t *testing.T) {
+	a := testApp(t)
+	for _, c := range []struct {
+		path, ctype string
+		w, h        int
+	}{
+		{"/apple-touch-icon.png", "image/png", 180, 180},
+		{"/static/favicon-32.png?v=" + version, "image/png", 32, 32},
+	} {
+		rec := do(t, a, httptest.NewRequest("GET", c.path, nil))
+		if rec.Code != 200 || rec.Header().Get("Content-Type") != c.ctype {
+			t.Errorf("%s: %d %s", c.path, rec.Code, rec.Header().Get("Content-Type"))
+			continue
+		}
+		cfg, err := png.DecodeConfig(rec.Body)
+		if err != nil || cfg.Width != c.w || cfg.Height != c.h {
+			t.Errorf("%s: %d×%d %v", c.path, cfg.Width, cfg.Height, err)
+		}
+	}
+	ico := do(t, a, httptest.NewRequest("GET", "/favicon.ico", nil))
+	if b := ico.Body.Bytes(); ico.Code != 200 || len(b) < 22 || !bytes.Equal(b[:4], []byte{0, 0, 1, 0}) || !bytes.Equal(b[22:26], []byte{0x89, 'P', 'N', 'G'}) {
+		t.Errorf("favicon.ico: %d, %d bytes", ico.Code, len(b))
+	}
+	if svg := do(t, a, httptest.NewRequest("GET", "/static/icon.svg?v="+version, nil)); svg.Code != 200 || !strings.Contains(svg.Body.String(), "<path fill=\"#ff0000\"") {
+		t.Errorf("icon.svg: %d", svg.Code)
+	}
+	home := do(t, a, httptest.NewRequest("GET", "/", nil)).Body.String()
+	for _, want := range []string{
+		`<link rel="icon" href="/static/icon.svg?v=` + version + `" type="image/svg+xml">`,
+		`<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=` + version + `">`,
+		`<link rel="icon" href="/favicon.ico" sizes="32x32">`,
+		`<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">`,
+	} {
+		if !strings.Contains(home, want) {
+			t.Errorf("home page lacks %s", want)
+		}
+	}
+	a.store.update(func(d *Data) error { d.Settings.Icon = "/img/2026/01/favicon-512.png"; return nil })
+	req := httptest.NewRequest("POST", "/admin/settings", strings.NewReader(url.Values{"title": {"Blog"}}.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(adminCookieFor(a))
+	do(t, a, req)
+	a.store.view(func(d *Data) {
+		if d.Settings.Icon != "/img/2026/01/favicon-512.png" {
+			t.Errorf("settings save dropped the icon upload: %q", d.Settings.Icon)
+		}
+	})
 }
