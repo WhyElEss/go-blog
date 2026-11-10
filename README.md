@@ -37,7 +37,8 @@ renders a page in a few milliseconds.
 - **Site card**: the home page, tag pages and posts without a cover share
   a 1200×630 card (`static/og.png`: "Maple & Vinyl", the tagline, the
   domain and the record-and-maple-leaf icon), drawn on a Mac by
-  `tools/og-card.swift` (how to run it is at the top of the file).
+  `tools/icons.swift` with the icons (how to run it is at the top of the
+  file).
 - **Covers** are 1.91:1 everywhere, the shape of link cards on Bluesky,
   Facebook and elsewhere: on the post page, in the post list and in
   `og:image` and the Bluesky card. A frame over the uploaded cover in the

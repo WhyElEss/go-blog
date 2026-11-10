@@ -1,13 +1,19 @@
 import AppKit
 
-// Draws the blog's icon set into static/ from its record-and-maple-leaf
-// icon (the upload /img/2026/01/favicon-512.png), the way
-// wishlist.stanislavski.me and vinyl.stanislavski.me have theirs:
+// Draws the blog's icon set and its link-preview card into static/ from
+// its record-and-maple-leaf icon (the upload
+// /img/2026/01/favicon-512.png), the way wishlist.stanislavski.me and
+// vinyl.stanislavski.me have theirs:
 //
 //	icon.svg              any size, for browsers that take SVG icons
 //	favicon-32.png        32×32 for the rest
 //	favicon.ico           the same 32×32 PNG in an ICO, for /favicon.ico
 //	apple-touch-icon.png  180×180, opaque (iOS rounds the corners itself)
+//	og.png                1200×630 card for pages without a picture: name,
+//	                      tagline, domain, the record (owner chose the light
+//	                      scheme of three drawn: light, red, dark)
+//
+// Every record is drawn as vectors with the same numbers as icon.svg.
 //
 // The leaf is traced from the icon's red pixels and simplified to a
 // polygon, so every size has the logo's leaf. Runs on a Mac (AppKit):
@@ -144,4 +150,51 @@ var size = UInt32(p32.count).littleEndian, offset = UInt32(22).littleEndian
 ico.append(Data(bytes: &size, count: 4)); ico.append(Data(bytes: &offset, count: 4)); ico.append(p32)
 try! ico.write(to: URL(fileURLWithPath: "\(out)/favicon.ico"))
 try! png(drawIcon(180, background: rgb(0xf7f2ea), recordScale: 0.86)).write(to: URL(fileURLWithPath: "\(out)/apple-touch-icon.png"))
+// og.png: text on the left as in the owner's other cards, the record whole
+// on the right.
+do {
+    let W: CGFloat = 1200, H: CGFloat = 630
+    let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(W), pixelsHigh: Int(H), bitsPerSample: 8,
+                               samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                               bytesPerRow: 0, bitsPerPixel: 0)!
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+    let ctx = NSGraphicsContext.current!.cgContext
+    NSGradient(starting: rgb(0xf7f2ea), ending: rgb(0xeee5d6))!.draw(in: NSRect(x: 0, y: 0, width: W, height: H), angle: -60)
+
+    // The disc is 0.92 of the 0…1 box: a 470 px disc, 84 px from the
+    // right edge like the text from the left one, centred in height.
+    let d: CGFloat = 470, box = d / 0.92
+    let cxR = W - 84 - d / 2, cyR = H / 2
+    ctx.saveGState()
+    ctx.setShadow(offset: CGSize(width: 0, height: -10), blur: 30, color: NSColor.black.withAlphaComponent(0.3).cgColor)
+    ctx.setFillColor(disc.cgColor)
+    ctx.fillEllipse(in: CGRect(x: cxR - d / 2, y: cyR - d / 2, width: d, height: d))
+    ctx.restoreGState()
+    ctx.saveGState()
+    ctx.translateBy(x: cxR - box / 2, y: cyR + box / 2)
+    ctx.scaleBy(x: box, y: -box)
+    recordPath(ctx)
+    ctx.restoreGState()
+
+    func font(_ size: CGFloat, _ weight: NSFont.Weight) -> NSFont { NSFont.systemFont(ofSize: size, weight: weight) }
+    let left: CGFloat = 84
+    let ink = rgb(0x1b1b1f), tf = font(96, .heavy)
+    let title = NSMutableAttributedString(string: "Maple ", attributes: [.font: tf, .foregroundColor: ink])
+    title.append(NSAttributedString(string: "&", attributes: [.font: tf, .foregroundColor: rgb(0xe00000)]))
+    title.append(NSAttributedString(string: "\nVinyl", attributes: [.font: tf, .foregroundColor: ink]))
+    let para = NSMutableParagraphStyle()
+    para.lineHeightMultiple = 0.92
+    title.addAttribute(.paragraphStyle, value: para, range: NSRange(location: 0, length: title.length))
+    title.draw(in: NSRect(x: left, y: 250, width: 560, height: 240))
+    let tag = NSMutableParagraphStyle()
+    tag.lineSpacing = 4
+    NSAttributedString(string: "Canadian life, analog warmth,\nand audio adventures",
+                       attributes: [.font: font(34, .regular), .foregroundColor: rgb(0x4a4642), .paragraphStyle: tag])
+        .draw(in: NSRect(x: left, y: 140, width: 560, height: 100))
+    NSAttributedString(string: "blog.stanislavski.me", attributes: [.font: font(30, .semibold), .foregroundColor: rgb(0xc8102e)])
+        .draw(at: NSPoint(x: left, y: 66))
+    NSGraphicsContext.restoreGraphicsState()
+    try! png(rep).write(to: URL(fileURLWithPath: "\(out)/og.png"))
+}
 print("leaf: \(leaf.count) points from \(pts.count) edge steps")
