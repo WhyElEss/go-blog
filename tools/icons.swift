@@ -9,6 +9,8 @@ import AppKit
 //	favicon-32.png        32×32 for the rest
 //	favicon.ico           the same 32×32 PNG in an ICO, for /favicon.ico
 //	apple-touch-icon.png  180×180, opaque (iOS rounds the corners itself)
+//	logo-light.svg        the header logo for the light theme: the record
+//	logo-dark.svg         and "Maple & Vinyl", the text as outlines
 //	og.png                1200×630 card for pages without a picture: name,
 //	                      tagline, domain, the record (owner chose the light
 //	                      scheme of three drawn: light, red, dark)
@@ -19,7 +21,8 @@ import AppKit
 // polygon, so every size has the logo's leaf. Runs on a Mac (AppKit):
 //
 //	curl -so /tmp/icon.png https://blog.stanislavski.me/img/2026/01/favicon-512.png
-//	swift tools/icons.swift /tmp/icon.png static
+//	scp stanislavski@192.168.2.110:/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf /tmp/
+//	swift tools/icons.swift /tmp/icon.png static /tmp/DejaVuSans-Bold.ttf
 
 let args = CommandLine.arguments
 let src = NSBitmapImageRep(data: try! Data(contentsOf: URL(fileURLWithPath: args[1])))!
@@ -197,4 +200,74 @@ do {
     NSGraphicsContext.restoreGraphicsState()
     try! png(rep).write(to: URL(fileURLWithPath: "\(out)/og.png"))
 }
+// Logos: the layout of the old 512×200 PNG logos (record at the left,
+// "Maple &" over "Vinyl" at the right), the text turned into outlines so
+// the SVG needs no font. LOGO_FONT picks the face (PostScript name).
+func svgPath(_ path: CGPath) -> String {
+    var d = ""
+    func n(_ v: CGFloat) -> String { String(format: "%.2f", Double(v)).replacingOccurrences(of: ".00", with: "") }
+    path.applyWithBlock { el in
+        let p = el.pointee.points
+        switch el.pointee.type {
+        case .moveToPoint: d += "M\(n(p[0].x)) \(n(p[0].y))"
+        case .addLineToPoint: d += "L\(n(p[0].x)) \(n(p[0].y))"
+        case .addQuadCurveToPoint: d += "Q\(n(p[0].x)) \(n(p[0].y)) \(n(p[1].x)) \(n(p[1].y))"
+        case .addCurveToPoint: d += "C\(n(p[0].x)) \(n(p[0].y)) \(n(p[1].x)) \(n(p[1].y)) \(n(p[2].x)) \(n(p[2].y))"
+        case .closeSubpath: d += "Z"
+        @unknown default: break
+        }
+    }
+    return d
+}
+// The outline of a line of text with its baseline at (x, y), y down.
+func textPath(_ text: String, font: CTFont, x: CGFloat, y: CGFloat) -> CGPath {
+    let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [.font: font]))
+    let out = CGMutablePath()
+    for run in CTLineGetGlyphRuns(line) as! [CTRun] {
+        let count = CTRunGetGlyphCount(run)
+        var glyphs = [CGGlyph](repeating: 0, count: count), pos = [CGPoint](repeating: .zero, count: count)
+        CTRunGetGlyphs(run, CFRange(location: 0, length: count), &glyphs)
+        CTRunGetPositions(run, CFRange(location: 0, length: count), &pos)
+        for i in 0..<count {
+            guard let g = CTFontCreatePathForGlyph(font, glyphs[i], nil) else { continue }
+            // Glyphs are y-up: flip into the y-down SVG box.
+            var t = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: x + pos[i].x, ty: y)
+            if let moved = g.copy(using: &t) { out.addPath(moved) }
+        }
+    }
+    return out
+}
+// The old logos are set in DejaVu Sans Bold (Bitstream Vera licence: free
+// to use and distribute; only the letters' outlines end up in the SVG).
+// It is not on the Mac; Debian has it (fonts-dejavu-core), so the third
+// argument is that file, e.g. copied from the Pi:
+//	scp stanislavski@192.168.2.110:/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf /tmp/
+guard args.count > 3, let fontData = CGDataProvider(url: URL(fileURLWithPath: args[3]) as CFURL), let cgFont = CGFont(fontData) else {
+    fatalError("usage: swift tools/icons.swift <icon.png> <outdir> <DejaVuSans-Bold.ttf>")
+}
+let lf = CTFontCreateWithGraphicsFont(cgFont, 61, nil, nil)
+let maple = textPath("Maple ", font: lf, x: 214, y: 92)
+let ampX = 214 + CTLineGetTypographicBounds(CTLineCreateWithAttributedString(NSAttributedString(string: "Maple ", attributes: [.font: lf])), nil, nil, nil)
+let amp = textPath("&", font: lf, x: CGFloat(ampX), y: 92)
+let vinyl = textPath("Vinyl", font: lf, x: 214, y: 160)
+let textRight = max(maple.boundingBox.maxX, amp.boundingBox.maxX, vinyl.boundingBox.maxX)
+let logoW = Int((textRight + 12).rounded(.up))
+func g(_ v: Double, _ c: Double, _ r: Double) -> String { String(format: "%.2f", c + (v - 0.5) * r).replacingOccurrences(of: ".00", with: "") }
+// The record in a 200 box: the 0…1 drawing scaled to 174 px (disc 160).
+func recordSVG(edge: String?) -> String {
+    let k = 174.0, o = 100.0
+    var r = "<circle cx=\"100\" cy=\"100\" r=\"\(String(format: "%.2f", 0.46 * k))\" fill=\"#1d1d22\"\(edge.map { " stroke=\"\($0)\" stroke-width=\"2\"" } ?? "")/>"
+    r += "<g fill=\"none\" stroke=\"#2e2e35\" stroke-width=\"\(String(format: "%.2f", 0.008 * k))\">"
+    for ring in rings { r += "<circle cx=\"100\" cy=\"100\" r=\"\(String(format: "%.2f", ring * k))\"/>" }
+    r += "</g><path fill=\"#ff0000\" d=\"M" + leafUnit.map { "\(g($0.0, o, k)) \(g($0.1, o, k))" }.joined(separator: "L") + "Z\"/>"
+    return r
+}
+for (name, ink, ampInk, edge) in [("logo-light", "#1d1d1f", "#ff0000", nil as String?), ("logo-dark", "#f5f5f7", "#ff3b30", "#3a3a40")] {
+    var l = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 \(logoW) 200\" width=\"\(logoW)\" height=\"200\">"
+    l += recordSVG(edge: edge)
+    l += "<path fill=\"\(ink)\" d=\"\(svgPath(maple))\(svgPath(vinyl))\"/>"
+    l += "<path fill=\"\(ampInk)\" d=\"\(svgPath(amp))\"/></svg>\n"
+    try! l.write(toFile: "\(out)/\(name).svg", atomically: true, encoding: .utf8)
+}
+
 print("leaf: \(leaf.count) points from \(pts.count) edge steps")

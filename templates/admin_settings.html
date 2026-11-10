@@ -9,14 +9,6 @@
   <label>{{t .Lang "per_page"}}<input type="number" name="posts_per_page" min="1" max="100" value="{{.S.PostsPerPage}}"></label>
   <label>{{t .Lang "nav"}}<textarea name="nav" rows="5" placeholder="About | Обо мне | /about/">{{.NavText}}</textarea><small>{{t .Lang "nav_hint"}}</small></label>
   <label>{{t .Lang "footer_nav"}}<textarea name="footer_nav" rows="3" placeholder="Contact | /contact/">{{.FooterTxt}}</textarea><small>{{t .Lang "nav_hint"}}</small></label>
-  <div class="cover-field">
-    <label>{{t .Lang "logo"}}<input name="logo" id="logo" value="{{.S.Logo}}" placeholder="/img/…"></label>
-    <button type="button" class="btn" data-field-upload="logo">{{t .Lang "upload"}}</button>
-  </div>
-  <div class="cover-field">
-    <label>{{t .Lang "logo_dark"}}<input name="logo_dark" id="logo_dark" value="{{.S.LogoDark}}" placeholder="/img/…"></label>
-    <button type="button" class="btn" data-field-upload="logo_dark">{{t .Lang "upload"}}</button>
-  </div>
   <fieldset class="profiles">
     <legend>{{t .Lang "profiles"}}</legend>
     <label>Bluesky<input type="url" name="bluesky" value="{{.S.Bluesky}}" placeholder="https://bsky.app/profile/…"></label>

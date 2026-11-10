@@ -2087,3 +2087,53 @@ func TestIcons(t *testing.T) {
 		}
 	})
 }
+
+// The header: the built-in logos for both themes, one button for the other
+// language and the theme button; the theme script loads in <head>.
+func TestHeaderButtons(t *testing.T) {
+	a := testApp(t)
+	get := func(lang string) string {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.AddCookie(&http.Cookie{Name: "lang", Value: lang})
+		return do(t, a, req).Body.String()
+	}
+	en, ru := get("en"), get("ru")
+	for _, want := range []string{
+		`<script src="/static/theme.js?v=` + version + `"></script>`,
+		`<img class="logo logo-light" src="/static/logo-light.svg?v=` + version + `"`,
+		`<img class="logo logo-dark" src="/static/logo-dark.svg?v=` + version + `"`,
+		`<a class="head-btn" href="/lang/ru?next=%2f" hreflang="ru" lang="ru" title="Русский" aria-label="Русский">RU</a>`,
+		`id="theme-btn" data-auto="Theme: follows the system" data-light="Theme: light" data-dark="Theme: dark"`,
+	} {
+		if !strings.Contains(en, want) {
+			t.Errorf("English page lacks %s", want)
+		}
+	}
+	if strings.Contains(en, ">EN</a>") {
+		t.Error("the English page offers English")
+	}
+	for _, want := range []string{
+		`<a class="head-btn" href="/lang/en?next=%2f" hreflang="en" lang="en" title="English" aria-label="English">EN</a>`,
+		`data-auto="Тема: как в системе"`,
+	} {
+		if !strings.Contains(ru, want) {
+			t.Errorf("Russian page lacks %s", want)
+		}
+	}
+	for _, f := range []string{"theme.js", "logo-light.svg", "logo-dark.svg"} {
+		if rec := do(t, a, httptest.NewRequest("GET", "/static/"+f+"?v="+version, nil)); rec.Code != 200 {
+			t.Errorf("%s: %d", f, rec.Code)
+		}
+	}
+	// Settings saves keep the old logo uploads.
+	a.store.update(func(d *Data) error { d.Settings.Logo, d.Settings.LogoDark = "/img/l.png", "/img/d.png"; return nil })
+	req := httptest.NewRequest("POST", "/admin/settings", strings.NewReader(url.Values{"title": {"Blog"}}.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(adminCookieFor(a))
+	do(t, a, req)
+	a.store.view(func(d *Data) {
+		if d.Settings.Logo != "/img/l.png" || d.Settings.LogoDark != "/img/d.png" {
+			t.Errorf("settings save dropped the logos: %q %q", d.Settings.Logo, d.Settings.LogoDark)
+		}
+	})
+}

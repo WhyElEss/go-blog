@@ -29,6 +29,11 @@ renders a page in a few milliseconds.
   address every upload with its upload time (`…/x.jpg?v=…`), so the new
   picture shows at once although `/img/` is cached for a year. Texts and
   fields keep the plain `/img/` address.
+- **Header**: the logo (`static/logo-light.svg`, `logo-dark.svg`, vector,
+  drawn by `tools/icons.swift`) and two small buttons: the other language
+  (RU on English pages, EN on Russian ones) and the theme, which goes
+  auto → light → dark (auto follows the system; a choice is kept in the
+  browser), as on vinyl.stanislavski.me. The logos are no longer a setting.
 - **Icons** in the style of the owner's other sites: `static/icon.svg`,
   `favicon-32.png`, `/favicon.ico` and a 180×180 `/apple-touch-icon.png`
   for Safari Favorites and the iOS home screen, drawn on a Mac by

@@ -18,8 +18,6 @@ type pageBase struct {
 	Title       string // <title>
 	SiteTitle   string
 	Description string
-	Logo        string
-	LogoDark    string
 	Nav         []Link
 	FooterNav   []Link
 	// Mastodon is the profile linked in the footer with rel="me", which
@@ -82,10 +80,9 @@ func (a *App) pageBase(r *http.Request, title string) pageBase {
 	lang := readerLang(r, s.Lang)
 	b := pageBase{
 		Lang: lang, SiteLang: lang, SiteTitle: s.Title, Description: pickText(lang, s.Lang, s.Description, s.DescriptionAlt),
-		Logo: s.Logo, LogoDark: s.LogoDark, Nav: localLinks(s.Nav, lang, s.Lang), FooterNav: localLinks(s.FooterNav, lang, s.Lang), Mastodon: s.Mastodon,
+		Nav: localLinks(s.Nav, lang, s.Lang), FooterNav: localLinks(s.FooterNav, lang, s.Lang), Mastodon: s.Mastodon,
 		Path: r.URL.Path, Origin: a.origin(r), FeedURL: "/rss/", OGType: "website", Admin: a.isAdmin(r), Version: version, Year: a.now().Year(),
 	}
-	b.Logo, b.LogoDark = a.imgSrc(b.Logo), a.imgSrc(b.LogoDark)
 	// The site's link-preview card (tools/icons.swift), cached a year
 	// under the build version like every /static/ file.
 	b.OGImage, b.OGImageW, b.OGImageH, b.OGImageAlt = b.Origin+"/static/og.png?v="+version, 1200, 630, s.Title

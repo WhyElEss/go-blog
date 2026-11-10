@@ -649,8 +649,6 @@ func (a *App) handleSettings(w http.ResponseWriter, r *http.Request) {
 		Lang:           normLang(r.FormValue("lang")),
 		Nav:            parseLinks(r.FormValue("nav")),
 		FooterNav:      parseLinks(r.FormValue("footer_nav")),
-		Logo:           strings.TrimSpace(r.FormValue("logo")),
-		LogoDark:       strings.TrimSpace(r.FormValue("logo_dark")),
 		Bluesky:        profileURL(r.FormValue("bluesky")),
 		Mastodon:       profileURL(r.FormValue("mastodon")),
 		X:              profileURL(r.FormValue("x")),
@@ -659,9 +657,14 @@ func (a *App) handleSettings(w http.ResponseWriter, r *http.Request) {
 	if s.Title == "" {
 		s.Title = "Blog"
 	}
-	// Icon is no longer set here (the icons are built in, static/); the old
-	// upload stays named so it stays in use (tools/icons.swift reads it).
-	if err := a.store.update(func(d *Data) error { s.Icon = d.Settings.Icon; d.Settings = s; return nil }); err != nil {
+	// Icon and the logos are no longer set here (built in, static/, drawn
+	// by tools/icons.swift); the old uploads stay named so they stay in use
+	// (the generator reads the icon).
+	if err := a.store.update(func(d *Data) error {
+		s.Icon, s.Logo, s.LogoDark = d.Settings.Icon, d.Settings.Logo, d.Settings.LogoDark
+		d.Settings = s
+		return nil
+	}); err != nil {
 		log.Printf("settings: %v", err)
 		http.Error(w, "save failed", http.StatusInternalServerError)
 		return

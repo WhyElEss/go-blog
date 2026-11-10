@@ -120,8 +120,8 @@ type Settings struct {
 	Lang      string `json:"lang"`
 	Nav       []Link `json:"nav,omitempty"`
 	FooterNav []Link `json:"footer_nav,omitempty"`
-	Logo      string `json:"logo,omitempty"`      // image URL; empty shows the title
-	LogoDark  string `json:"logo_dark,omitempty"` // logo for dark mode; empty uses Logo
+	Logo      string `json:"logo,omitempty"`      // the old uploaded logo; not shown since 2026-11-10 (static/logo-light.svg)
+	LogoDark  string `json:"logo_dark,omitempty"` // the old uploaded dark logo; not shown since 2026-11-10 (static/logo-dark.svg)
 	Icon      string `json:"icon,omitempty"`      // the uploaded square icon the built-in icons are drawn from (tools/icons.swift); not served since 2026-11-10
 	// Profiles linked under every post for comments; empty ones are left out.
 	Bluesky      string `json:"bluesky,omitempty"`

@@ -9,8 +9,10 @@
   --accent-ink: #0b6aa3;
   --mark: #fff0a8;
 }
+/* Dark colours: from the system unless the reader chose a theme with the
+   header button (static/theme.js sets data-theme on <html>). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --text: #e8e8ea;
     --muted: #9a9aa0;
     --line: #34343a;
@@ -19,7 +21,19 @@
     --accent: #4fb3ea;
     --accent-ink: #7cc8f2;
     --mark: #5c4d12;
+    color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --text: #e8e8ea;
+  --muted: #9a9aa0;
+  --line: #34343a;
+  --bg: #161618;
+  --soft: #222226;
+  --accent: #4fb3ea;
+  --accent-ink: #7cc8f2;
+  --mark: #5c4d12;
+  color-scheme: dark;
 }
 
 .content {
